@@ -3,8 +3,9 @@
 #include <vector>
 
 int main(int argc, char** argv) {
-    int horizontalPosition = 0;
-    int depth = 0;
+    long long horizontalPosition = 0;
+    long long depth = 0;
+    long long aim = 0;
     std::string line;
     std::ifstream input_file("day2.txt");
     if (!input_file.is_open()) {
@@ -16,12 +17,13 @@ int main(int argc, char** argv) {
         switch (line[0]) {
             case 'f':
                 horizontalPosition += line[line.size()-1] - '0';
+                depth += aim * (line[line.size()-1] - '0'); // forgot parentheses the first time
                 break;
             case 'd':
-                depth += line[line.size()-1] - '0';
+                aim += line[line.size()-1] - '0';
                 break;
             case 'u':
-                depth -= line[line.size()-1] - '0';
+                aim -= line[line.size()-1] - '0';
                 break;
             default:
                 break;
