@@ -1,0 +1,39 @@
+{
+	// Place your Advent of Code 2021 workspace snippets here. Each snippet is defined under a snippet name and has a scope, prefix, body and 
+	// description. Add comma separated ids of the languages where the snippet is applicable in the scope field. If scope 
+	// is left empty or omitted, the snippet gets applied to all languages. The prefix is what is 
+	// used to trigger the snippet and the body will be expanded and inserted. Possible variables are: 
+	// $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders. 
+	// Placeholders with the same ids are connected.
+	// Example:
+	// "Print to console": {
+	// 	"scope": "javascript,typescript",
+	// 	"prefix": "log",
+	// 	"body": [
+	// 		"console.log('$1');",
+	// 		"$2"
+	// 	],
+	// 	"description": "Log output to console"
+	// }
+	"strings": {
+		"scope": "c++,cpp",
+		"prefix": "strs",
+		"body": [
+			"std::vector<std::string> strings = getStrings();"
+		]
+	},
+	"ints": {
+		"scope": "c++,cpp",
+		"prefix": "ints",
+		"body": [
+			"std::vector<int> ints = getInts();"
+		]
+	},
+	"other": {
+		"scope": "c++, cpp",
+		"prefix": "oth",
+		"body": [
+			"std::string line;\n\n    std::ifstream input_file(\"day1.txt\");\n    if (!input_file.is_open()) {\n        std::cerr << \"Error opening file\" << std::endl;\n        return {};\n    }\n\n    while (getline(input_file, line)) {\n        ${1:/* code */}\n    }\n\n    input_file.close();"
+		]
+	}
+}
