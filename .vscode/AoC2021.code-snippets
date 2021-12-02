@@ -33,7 +33,7 @@
 		"scope": "c++, cpp",
 		"prefix": "oth",
 		"body": [
-			"std::string line;\n\n    std::ifstream input_file(\"day1.txt\");\n    if (!input_file.is_open()) {\n        std::cerr << \"Error opening file\" << std::endl;\n        return {};\n    }\n\n    while (getline(input_file, line)) {\n        ${1:/* code */}\n    }\n\n    input_file.close();"
+			"std::string line;\n\n    std::ifstream input_file(\"day2.txt\");\n    if (!input_file.is_open()) {\n        std::cerr << \"Error opening file\" << std::endl;\n        return {};\n    }\n\n    while (getline(input_file, line)) {\n        ${1:/* code */}\n    }\n\n    input_file.close();"
 		]
 	}
 }
