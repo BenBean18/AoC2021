@@ -60,12 +60,12 @@ int main(int argc, char** argv) {
     std::cout << "\033[48;5;238m";
     for (int i = 0; i < size.ws_row; i++) {
         for (int j = 0; j < size.ws_col; j++) {
-            std::cout << " ";
+            std::cout << "\u200c";
         }
         std::cout << std::endl;
     }
     int counter = 0;
-    double timeMultiplier = 3;
+    double timeMultiplier = 6;
     for (std::string s : strings) {
         counter++;
         std::vector<int> calledOpeningIndices{};
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
         // If it does, the last item should be removed. If it doesn't, add to the score for the line.
         bool isIncomplete = true;
         for (int i = 0; i < s.size(); i++) {
-            std::cout << "\033[" << std::to_string(size.ws_row/2 - 1) << "H\033[48;5;237m"; // move cursor to middle - 1
+            std::cout << "\033[" << 1 << "H\033[48;5;237m"; // move cursor to first row
             std::cout << counter << "/" << strings.size();
             std::cout << "\033[" << std::to_string(size.ws_row/2) << "H\033[48;5;237m"; // move cursor to middle
             char c = s[i];
@@ -171,6 +171,7 @@ int main(int argc, char** argv) {
             }
             std::cout << "\r";
             std::cout << "\033[0;m";
+            std::this_thread::sleep_for(std::chrono::milliseconds((int)(timeMultiplier*300)));
             scores.push_back(score);
         }
 
