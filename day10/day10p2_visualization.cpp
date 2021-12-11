@@ -81,6 +81,14 @@ int main(int argc, char** argv) {
             if (std::find(startingCharacters.begin(), startingCharacters.end(), c) != startingCharacters.end()) {
                 calledOpeningCharacters.push_back(c);
                 calledOpeningIndices.push_back(i);
+                std::cout << "\033[" << 2 << "H\033[48;5;238m\r"; // move cursor to second row
+                std::cout << "List:                   \rList: ";
+                for (char c : calledOpeningCharacters) {
+                    std::cout << c;
+                    std::this_thread::sleep_for(std::chrono::milliseconds((int)(timeMultiplier*3)));
+                    std::flush(std::cout);
+                }
+                std::cout << "\033[" << std::to_string(size.ws_row/2) << "H\033[48;5;237m"; // move cursor to middle
             } else if (std::find(closingCharacters.begin(), closingCharacters.end(), c) != closingCharacters.end()) {
                 if (calledOpeningCharacters.size() == 0) {
                     std::cout << "\r\033[48;5;238m";
@@ -115,12 +123,28 @@ int main(int argc, char** argv) {
                     isIncomplete = false;
                     break;
                 } else {
+                    std::cout << "\033[" << 2 << "H\033[48;5;238m\r"; // move cursor to second row
+                    std::cout << "List:                   \rList: ";
+                    for (char c : calledOpeningCharacters) {
+                        std::cout << c;
+                        std::this_thread::sleep_for(std::chrono::milliseconds((int)(timeMultiplier*3)));
+                        std::flush(std::cout);
+                    }
+                    std::cout << "\033[" << std::to_string(size.ws_row/2) << "H\033[48;5;237m"; // move cursor to middle
                     calledOpeningCharacters.pop_back();
                     calledOpeningIndices.pop_back();
                 }
             }
         }
         if (isIncomplete) {
+            std::cout << "\033[" << 2 << "H\033[48;5;238m\r"; // move cursor to second row
+            std::cout << "List:                   \rList: ";
+            for (char c : calledOpeningCharacters) {
+                std::cout << c;
+                std::this_thread::sleep_for(std::chrono::milliseconds((int)(timeMultiplier*3)));
+                std::flush(std::cout);
+            }
+            std::cout << "\033[" << std::to_string(size.ws_row/2) << "H\033[48;5;237m"; // move cursor to middle
             // for (int)
             std::cout << "\033[48;5;238m";
             int color = (rand() % 170 + 50);
