@@ -86,6 +86,19 @@ int main(int argc, char** argv) {
         // While there are still items in the 2D array > 9:
         int above9 = std::count_if(data.begin(), data.end(), [](std::vector<int> i){return std::count_if(i.begin(), i.end(), [](int i){return i > 9;}) > 0;});
         while (above9 > 0) {
+            std::cout << "\033[1H";
+            for (int y = 0; y < data.size(); y++) {
+                std::cout << "\r               \r";
+                for (int x = 0; x < data[0].size(); x++) {
+                    if (alreadyFlashed[y][x]) {
+                        std::cout << "\033[38;5;226m";
+                    }
+                    std::cout << "*";
+                    std::cout << "\033[0m";
+                }
+                std::cout << std::endl;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds((int)(50 * flashSpeed)));
             // For each y in the 2D array:
             for (int y = 0; y < data.size(); y++) {
                 // For each x in the 2D array:
