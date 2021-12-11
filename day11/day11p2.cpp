@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
     std::vector<std::vector<bool>> alreadyFlashed(data.size());
     // Step number = 0
     int step = 0;
-    int showFlashing = 0; // 0 = off
+    double flashSpeed = 0; // 0 = off
     // While all of data is not equal to 0:
     while (std::count_if(data.begin(), data.end(), [](std::vector<int> v){return std::count(v.begin(), v.end(), 0) == v.size();}) != data.size()) {
         // Reset 2D vector of already flashed to false
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
             }
             std::cout << std::endl;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100 * showFlashing));
+        std::this_thread::sleep_for(std::chrono::milliseconds((int)(100 * flashSpeed)));
         step++;
     }
     std::cout << step << std::endl;

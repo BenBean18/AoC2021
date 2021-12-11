@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     // Flash count = 0
     unsigned long flashCount = 0;
     int steps = 100;
-    int showFlashing = 0; // 0 = off
+    double flashSpeed = 0; // 0 = off
     // For each step:
     for (int _ = 0; _ < steps; _++) {
         // Reset 2D vector of already flashed to false
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
             }
             std::cout << std::endl;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100 * showFlashing));
+        std::this_thread::sleep_for(std::chrono::milliseconds((int)(100 * flashSpeed)));
         std::cout << flashCount << std::endl;
     }
     std::cout << flashCount << std::endl;
