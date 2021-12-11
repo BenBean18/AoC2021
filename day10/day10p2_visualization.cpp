@@ -91,6 +91,14 @@ int main(int argc, char** argv) {
                 std::cout << "\033[" << std::to_string(size.ws_row/2) << "H\033[48;5;237m"; // move cursor to middle
             } else if (std::find(closingCharacters.begin(), closingCharacters.end(), c) != closingCharacters.end()) {
                 if (calledOpeningCharacters.size() == 0) {
+                    std::cout << "\033[" << 2 << "H\033[48;5;238m\r"; // move cursor to second row
+                    std::cout << "List:                   \rList: ";
+                    for (char c : calledOpeningCharacters) {
+                        std::cout << c;
+                        std::this_thread::sleep_for(std::chrono::milliseconds((int)(timeMultiplier*3)));
+                        std::flush(std::cout);
+                    }
+                    std::cout << "\033[" << std::to_string(size.ws_row/2) << "H\033[48;5;237m"; // move cursor to middle
                     std::cout << "\r\033[48;5;238m";
                     for (int i = 0; i < size.ws_col; i++) {
                         std::cout << " ";
@@ -107,6 +115,14 @@ int main(int argc, char** argv) {
                     isIncomplete = false;
                     break;
                 } else if (closingToOpening[c] != calledOpeningCharacters[calledOpeningCharacters.size()-1]) {
+                    std::cout << "\033[" << 2 << "H\033[48;5;238m\r"; // move cursor to second row
+                    std::cout << "List:                   \rList: ";
+                    for (char c : calledOpeningCharacters) {
+                        std::cout << c;
+                        std::this_thread::sleep_for(std::chrono::milliseconds((int)(timeMultiplier*3)));
+                        std::flush(std::cout);
+                    }
+                    std::cout << "\033[" << std::to_string(size.ws_row/2) << "H\033[48;5;237m"; // move cursor to middle
                     std::cout << "\r\033[48;5;238m";
                     for (int i = 0; i < size.ws_col; i++) {
                         std::cout << " ";
