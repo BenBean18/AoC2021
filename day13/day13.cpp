@@ -73,7 +73,7 @@ public:
     //  (This effectively reverses the vector which we need to do, because of the way things are folded)
     // OR everything in the copied vector with the original vector, and resize the original vector to be the size minus the size of the copied vector
 
-    // Edit: instead, copy from max to 0+offset (where offset is how many in front of line - how many after line) to handle edge case where the fold does not cover all of the paper
+    // Edit: instead, copy from positive of the line to negative of the line
     // Example of edge case (. represents single fold, * represents double fold):
     /*
     ..***            *****
@@ -84,17 +84,14 @@ public:
     // direction = 'x' or 'y', line = what x or y equals
     void fold(char direction, int line) {
         if (direction == 'y') {
-            int offset = line-(paper.size()-line-1);
-            for (int y = offset; y < line; y++) {
-                std::transform(paper[paper.size()-1-(y-offset)].begin(), paper[paper.size()-1-(y-offset)].end(), paper[y].begin(), paper[y].begin(), orOperator);
+            for (int y = 0; y < paper.size()-line; y++) {
+                std::transform(paper[line+y].begin(), paper[line+y].end(), paper[line-y].begin(), paper[line-y].begin(), orOperator);
             }
             paper.resize(line);
         } else if (direction == 'x') {
-            int offset = line-(paper[0].size()-line-1);
             for (int y = 0; y < paper.size(); y++) {
-                std::vector<bool> thisLine;
-                for (int x = offset; x < line; x++) {
-                    paper[y][x] = paper[y][x] || paper[y][paper[0].size()-1-(x-offset)];
+                for (int x = 0; x < paper[0].size()-line; x++) {
+                    paper[y][line-x] = paper[y][line-x] || paper[y][line+x];
                 }
             }
             for (int y = 0; y < paper.size(); y++) {
