@@ -73,32 +73,32 @@ public:
     //  (This effectively reverses the vector which we need to do, because of the way things are folded)
     // OR everything in the copied vector with the original vector, and resize the original vector to be the size minus the size of the copied vector
 
+    // Edit: instead, copy from max to 0+offset (where offset is how many in front of line - how many after line) to handle edge case where the fold does not cover all of the paper
+    // Example of edge case (. represents single fold, * represents double fold):
+    /*
+    ..***            *****
+    ..*** instead of *****
+    ..***            *****
+    */
+
     // direction = 'x' or 'y', line = what x or y equals
     void fold(char direction, int line) {
-        std::vector<std::vector<bool>> foldCopy;
         if (direction == 'y') {
-            for (int y = paper.size()-1; y > line; y--) {
-                foldCopy.push_back(paper[y]);
+            int offset = line-(paper.size()-line-1);
+            for (int y = offset; y < line; y++) {
+                std::transform(paper[paper.size()-1-(y-offset)].begin(), paper[paper.size()-1-(y-offset)].end(), paper[y].begin(), paper[y].begin(), orOperator);
             }
-            for (int y = 0; y < foldCopy.size(); y++) {
-                std::transform(foldCopy[y].begin(), foldCopy[y].end(), paper[y].begin(), paper[y].begin(), orOperator);
-            }
-            std::cout << "Resizing y: " << paper.size() << ", " << foldCopy.size() << std::endl;
-            paper.resize(paper.size()-foldCopy.size()-1);
+            paper.resize(line);
         } else if (direction == 'x') {
+            int offset = line-(paper[0].size()-line-1);
             for (int y = 0; y < paper.size(); y++) {
                 std::vector<bool> thisLine;
-                for (int x = paper[0].size()-1; x > line; x--) {
-                    thisLine.push_back(paper[y][x]);
+                for (int x = offset; x < line; x++) {
+                    paper[y][x] = paper[y][x] || paper[y][paper[0].size()-1-(x-offset)];
                 }
-                foldCopy.push_back(thisLine);
             }
-            for (int y = 0; y < foldCopy.size(); y++) {
-                std::transform(foldCopy[y].begin(), foldCopy[y].end(), paper[y].begin(), paper[y].begin(), orOperator);
-            }
-            std::cout << "Resizing x: " << paper[0].size() << ", " << foldCopy[0].size() << std::endl;
             for (int y = 0; y < paper.size(); y++) {
-                paper[y].resize(paper[y].size()-foldCopy[y].size()-1);
+                paper[y].resize(line);
             }
         }
     }
@@ -113,7 +113,6 @@ OrigamiPaper parseInputAndFold(int noLimit = false) {
         std::smatch match;
         std::regex_match(s, match, dot);
         if (match.size() == 3) {
-            std::cout << match[1] << "," << match[2] << std::endl;
             dots.push_back({std::stoi(match[1].str()),std::stoi(match[2].str())});
         }
     }
@@ -136,10 +135,8 @@ int main(int argc, char** argv) {
     int dotsOn = 0;
     for (std::vector<bool> line : p.paper) {
         for (bool b : line) {
-            std::cout << (b?"#":".");
             dotsOn += b;
         }
-        std::cout << std::endl;
     }
     std::cout << dotsOn << " dots on" << std::endl;;
     return 0;
