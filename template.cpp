@@ -6,7 +6,7 @@ std::vector<std::string> getStrings() {
     std::vector<std::string> strings;
     std::string line;
 
-    std::ifstream input_file("day4.txt");
+    std::ifstream input_file("input.txt");
     if (!input_file.is_open()) {
         std::cerr << "Error opening file" << std::endl;
         return {};
@@ -24,7 +24,7 @@ std::vector<int> getInts() {
     std::vector<int> ints;
     std::string line;
 
-    std::ifstream input_file("day4.txt");
+    std::ifstream input_file("input.txt");
     if (!input_file.is_open()) {
         std::cerr << "Error opening file" << std::endl;
         return {};
@@ -40,6 +40,6 @@ std::vector<int> getInts() {
 
 int main(int argc, char** argv) {
     // Insert code here! Use snippets -- "strs" = strings, "ints" = ints, "oth" = other
-    
+
     return 0;
 }
