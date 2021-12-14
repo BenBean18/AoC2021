@@ -65,6 +65,7 @@ int main(int argc, char** argv) {
         pair.push_back(polymer[i]);
         pairs[pair] += 1;
     }
+    std::map<char, long long> characterFrequencyMap;
     for (int i = 0; i < steps; i++) {
         auto pairsCopy = pairs;
         for (int i = 0; i < ruleInputs.size(); i++) {
@@ -73,17 +74,17 @@ int main(int argc, char** argv) {
             unsigned long long howManyPairs = pairs[ri];
             std::string pair1 = "";
             pair1.push_back(ri[0]);
-            pair1.push_back(ro[0]);
+            pair1.push_back(ro[0]); // duplicate
             std::string pair2 = "";
-            pair2.push_back(ro[0]);
+            pair2.push_back(ro[0]); // duplicate
             pair2.push_back(ri[1]);
             pairsCopy[ri] -= pairs[ri];
             pairsCopy[pair1] += howManyPairs;
             pairsCopy[pair2] += howManyPairs;
+            // characterFrequencyMap[ro[0]] -= howManyPairs; // this would remove the duplicate but was giving an off by one error
         }
         pairs = pairsCopy;
     }
-    std::map<char, unsigned long long> characterFrequencyMap;
     for (auto pair : pairs) {
         // characterFrequencies.push_back(std::count(polymer.begin(), polymer.end(), c));
         characterFrequencyMap[pair.first[0]] += pair.second;
@@ -94,6 +95,6 @@ int main(int argc, char** argv) {
         std::cout << f.first << " " << f.second << std::endl; // these are double oddly
         characterFrequencies.push_back(f.second);
     }
-    std::cout << (*std::max_element(characterFrequencies.begin(), characterFrequencies.end()) - *std::min_element(characterFrequencies.begin(), characterFrequencies.end())) / 2 + 1 << std::endl;
+    std::cout << (*std::max_element(characterFrequencies.begin(), characterFrequencies.end()) - *std::min_element(characterFrequencies.begin(), characterFrequencies.end())) / 2 + 1 << std::endl; // Remove duplicate from count (e.g. if rule is AC -> B and you have AC, you get ABC -> pairs are AB and BC -> there is an extra B when counting)
     return 0;
 }
