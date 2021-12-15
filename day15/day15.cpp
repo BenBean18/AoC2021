@@ -6,6 +6,8 @@
 #include <set>
 #include <map>
 #include <algorithm>
+#include <type_traits>
+#include <limits>
 
 std::vector<std::string> getStrings() {
     std::vector<std::string> strings;
@@ -74,7 +76,7 @@ public:
             }
             for (T neighbor : this->neighbors(current)) {
                 double newCost = costSoFar[current] + costFunction(current, neighbor);
-                if (std::find_if(costSoFar.begin(), costSoFar.end(), [neighbor](std::pair<T,double> i){ return i.first == neighbor; }) == costSoFar.end() || newCost < costSoFar[neighbor]) {
+                if ((std::find_if(costSoFar.begin(), costSoFar.end(), [neighbor](std::pair<T,double> i){ return i.first == neighbor; }) == costSoFar.end()) || (newCost < costSoFar[neighbor])) {
                     costSoFar[neighbor] = newCost;
                     double priority = newCost;
                     frontier.put(neighbor, priority);
@@ -93,22 +95,22 @@ Graph<std::pair<std::pair<int,int>,int>> parseInput() {
     for (int y = 0; y < strings.size(); y++) {
         for (int x = 0; x < strings[y].size(); x++) {
             try {
-                graph.addEdge({{y-1,x-1},strings.at(y-1).at(x-1)-'0'}, {{y,x},strings.at(y).at(x)-'0'});
+                graph.addEdge({{y-1,x},strings.at(y-1).at(x)-'0'}, {{y,x},strings.at(y).at(x)-'0'});
             } catch (...) {
                 // out of bounds, do nothing
             }
             try {
-                graph.addEdge({{y-1,x+1},strings.at(y-1).at(x+1)-'0'}, {{y,x},strings.at(y).at(x)-'0'});
+                graph.addEdge({{y+1,x},strings.at(y+1).at(x)-'0'}, {{y,x},strings.at(y).at(x)-'0'});
             } catch (...) {
                 // out of bounds, do nothing
             }
             try {
-                graph.addEdge({{y+1,x-1},strings.at(y+1).at(x-1)-'0'}, {{y,x},strings.at(y).at(x)-'0'});
+                graph.addEdge({{y,x-1},strings.at(y).at(x-1)-'0'}, {{y,x},strings.at(y).at(x)-'0'});
             } catch (...) {
                 // out of bounds, do nothing
             }
             try {
-                graph.addEdge({{y+1,x+1},strings.at(y+1).at(x+1)-'0'}, {{y,x},strings.at(y).at(x)-'0'});
+                graph.addEdge({{y,x+1},strings.at(y).at(x+1)-'0'}, {{y,x},strings.at(y).at(x)-'0'});
             } catch (...) {
                 // out of bounds, do nothing
             }
@@ -120,11 +122,29 @@ Graph<std::pair<std::pair<int,int>,int>> parseInput() {
 int main(int argc, char** argv) {
     auto graph = parseInput();
     std::vector<std::string> strings = getStrings();
-    auto result = graph.dijkstra({{0,0},strings[0][0]-'0'},{{strings.size()-1,strings[0].size()-1},strings[strings.size()-1][strings[0].size()-1]-'0'}, [](auto i, auto i2){ return (double)(i2.first.second); });
+    auto result = graph.dijkstra({{0,0},strings[0][0]-'0'},{{strings.size()-1,strings[0].size()-1},strings[strings.size()-1][strings[0].size()-1]-'0'}, [](auto i, auto i2){ return (double)(i2.second); }); // fixed score function bug
     int riskScore = 0;
-    for (auto i : result.second) { // iterate from last to start
-        riskScore += i.second;
+    std::pair<std::pair<int,int>,int> current = {{strings.size()-1,strings[0].size()-1},strings[strings.size()-1][strings[0].size()-1]-'0'};
+    std::pair<std::pair<int,int>,int> start = {{0,0},strings[0][0]-'0'};
+    std::vector<std::pair<std::pair<int,int>,int>> path;
+    std::cout << "done with dijkstra" << std::endl;
+    std::flush(std::cout);
+    std::vector<std::pair<std::pair<int,int>,int>> visited = {current};
+    // for (auto i : result.first) {
+    //     // std::cout << i.first.first.first << "," << i.first.first.second << " : " << i.second.first.first << "," << i.second.first.second << std::endl;
+    //     // std::cout << i.first.first.first << "," << i.first.first.second << " : " << i.second << std::endl;
+    // }
+    while (!(current.first.first == 0 && current.first.second == 0)) {
+        // make sure node isn't already visited, may need to do that in dijkstra function
+        path.push_back(current);
+        current = result.first[current];
     }
-    std::cout << riskScore << std::endl;
+    path.push_back(start);
+    for (int i = path.size()-1; i >= 0; i--) {
+        riskScore += strings[path[i].first.first][path[i].first.second] - '0';
+        std::cout << path[i].first.second << "," << path[i].first.first << std::endl;
+    }
+    riskScore -= strings[0][0] - '0';
+    std::cout << "risk: " << riskScore << std::endl;
     return 0;
 }
