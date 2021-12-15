@@ -67,8 +67,8 @@ public:
         std::map<T,double> costSoFar;
         // costSoFar[start] = NULL;
 
-        // This is more efficient than looking through costSoFar
-        std::set<T> visited;
+        // This drastically improves speed (more than 10x), find() is slow
+        std::map<T,bool> visited;
 
         while (!frontier.empty()) {
             T current = frontier.get();
@@ -77,8 +77,8 @@ public:
             }
             for (T neighbor : this->neighbors(current)) {
                 double newCost = costSoFar[current] + costFunction(current, neighbor);
-                if ((std::find(visited.begin(), visited.end(), neighbor) == visited.end()) || (newCost < costSoFar[neighbor])) {
-                    visited.insert(neighbor);
+                if (!visited[neighbor] || (newCost < costSoFar[neighbor])) {
+                    visited[neighbor] = true;
                     costSoFar[neighbor] = newCost;
                     double priority = newCost;
                     frontier.put(neighbor, priority);
