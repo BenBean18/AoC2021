@@ -6,8 +6,6 @@
 #include <set>
 #include <map>
 #include <algorithm>
-#include <type_traits>
-#include <limits>
 
 std::vector<std::string> getStrings() {
     std::vector<std::string> strings;
@@ -69,6 +67,9 @@ public:
         std::map<T,double> costSoFar;
         // costSoFar[start] = NULL;
 
+        // This is more efficient than looking through costSoFar
+        std::set<T> visited;
+
         while (!frontier.empty()) {
             T current = frontier.get();
             if (current == end) {
@@ -76,7 +77,8 @@ public:
             }
             for (T neighbor : this->neighbors(current)) {
                 double newCost = costSoFar[current] + costFunction(current, neighbor);
-                if ((std::find_if(costSoFar.begin(), costSoFar.end(), [neighbor](std::pair<T,double> i){ return i.first == neighbor; }) == costSoFar.end()) || (newCost < costSoFar[neighbor])) {
+                if ((std::find(visited.begin(), visited.end(), neighbor) == visited.end()) || (newCost < costSoFar[neighbor])) {
+                    visited.insert(neighbor);
                     costSoFar[neighbor] = newCost;
                     double priority = newCost;
                     frontier.put(neighbor, priority);
