@@ -192,13 +192,13 @@ void debugVisualization(PriorityQueue<N,double> frontier, N current, N next, std
     for (auto c : connections) {
         map[c.first.first.first][c.first.first.second] = c.first.second;
     }
-    std::vector<N> deprioritizedFrontier;
+    std::vector<N> orderedFrontier; // ordered by priority, most prioritized at index 0
     for (int _ = 0; _ < frontier.elements.size(); _++) {
-        deprioritizedFrontier.push_back(frontier.get());
+        orderedFrontier.push_back(frontier.get());
     }
     std::pair<int,int> currentYX = current.first;
     std::cout << "\033[H"; // cursor to top left
-    int frontierColor = 255;
+    int frontierColor = 5;
     for (int y = 0; y < map.size(); y++) {
         for (int x = 0; x < map[0].size(); x++) {
             N thisNode = {{y,x},map[y][x]};
@@ -213,8 +213,8 @@ void debugVisualization(PriorityQueue<N,double> frontier, N current, N next, std
                 std::cout << "\033[48;5;226m";
                 std::cout << map[y][x];
                 std::cout << "\033[0m";
-            } else if (std::find(deprioritizedFrontier.begin(), deprioritizedFrontier.end(), thisNode) != deprioritizedFrontier.end()) {
-                frontierColor -= 5;
+            } else if (std::find(orderedFrontier.begin(), orderedFrontier.end(), thisNode) != orderedFrontier.end()) {
+                frontierColor += (int)(255 / orderedFrontier.size());
                 std::cout << "\033[48;2;0;" << frontierColor << ";" << frontierColor << "m";
                 std::cout << map[y][x];
                 std::cout << "\033[0m";
@@ -241,6 +241,9 @@ int main(int argc, char** argv) {
     std::cout << "done parsing input" << std::endl;
     std::cout << "\033[H\033[J"; // cursor to top left and clear screen
     auto result = graph.dijkstra({{0,0},strings[0][0]-'0'},{{strings.size()-1,strings[0].size()-1},strings[strings.size()-1][strings[0].size()-1]-'0'}, [](auto i, auto i2){ return (double)(i2.second); }, debugVisualization); // fixed score function bug
+#ifdef VISUALIZE
+    delay(1000); // If we're visualizing, pause so we can see it
+#endif
     int riskScore = 0;
     std::pair<std::pair<int,int>,int> current = {{strings.size()-1,strings[0].size()-1},strings[strings.size()-1][strings[0].size()-1]-'0'};
     std::pair<std::pair<int,int>,int> start = {{0,0},strings[0][0]-'0'};
