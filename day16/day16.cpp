@@ -6,6 +6,7 @@
 #include <cmath>
 #include <chrono>
 #include <thread>
+#include <memory>
 
 void delay(int ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
@@ -57,10 +58,11 @@ std::string hexToBin(std::string s) {
     return toReturn;
 }
 
-struct Packet {
+class Packet {
+public:
     std::string _data;
-    unsigned int version : 3; // 3 bits
-    unsigned int type : 3; // 3 bits
+    unsigned int version; // 3 bits
+    unsigned int type; // 3 bits
     int bitLength = 6;
     Packet() {
 
@@ -74,9 +76,8 @@ struct Packet {
         }
         this->version = std::stoi(_data.substr(0, 3), nullptr, 2);
         this->type = std::stoi(_data.substr(3, 3), nullptr, 2);
-        // std::cout << " Data assigned, type = " << this->type << ", version = " << this->version << std::endl;
     }
-    virtual std::tuple<Packet*, int, int> getPacket(); // returns packet, # of hex bits used, and type
+    virtual Packet* getPacket(); // returns packet
     int getLengthInHexBits() {
         return ceil((double)bitLength / 4.);
     }
@@ -85,19 +86,15 @@ struct Packet {
     }
 };
 
-struct LiteralValuePacket : Packet {
-    unsigned int version : 3; // 3 bits
-    unsigned int type : 3; // 3 bits
+class LiteralValuePacket : public Packet {
+public:
+    // IF YOU HAVE EXTRA FIELDS YOU CAN'T USE Base*
     unsigned long long literalValue;
-    LiteralValuePacket() {
-
-    }
     LiteralValuePacket(Packet *packet) {
         this->_data = packet->_data;
         this->version = packet->version;
         this->type = packet->type;
         this->bitLength = packet->bitLength;
-        std::cout << this->version << "+";
         // std::cout << "version:" << this->version;
 
         int i = 6;
@@ -129,21 +126,17 @@ struct LiteralValuePacket : Packet {
     }
 };
 
-struct OperatorPacket : Packet {
-    unsigned int version : 3; // 3 bits
-    unsigned int type : 3; // 3 bits
-    unsigned int lengthTypeID : 1; // 0 = 15 bits, 1 = 11 bits
+class OperatorPacket : public Packet {
+public:
+    // IF YOU HAVE EXTRA FIELDS YOU CAN'T USE Base*
+    unsigned int lengthTypeID; // 0 = 15 bits, 1 = 11 bits
     std::vector<Packet*> subPackets;
-    OperatorPacket() {
-
-    }
     OperatorPacket(Packet *packet) {
         this->_data = packet->_data;
         this->version = packet->version;
         this->type = packet->type;
         this->bitLength = packet->bitLength;
         this->lengthTypeID = std::stoi(_data.substr(6, 1), nullptr, 2);
-        std::cout << this->version << "+";
         unsigned long totalLength;
         unsigned long totalSubpacketLength;
         std::string newData;
@@ -155,18 +148,11 @@ struct OperatorPacket : Packet {
                 totalLength = 22;
                 newData = _data.substr(totalLength);
                 while (totalLength < totalSubpacketLength + 22) {
-                    Packet packet;
-                    packet.assignData(newData, true); // true means is binary
-                    auto actualPacket = packet.getPacket();
-                    Packet *packetPtr;
-                    int length;
-                    int type;
-                    std::tie(packetPtr, length, type) = actualPacket;
-                    // std::cout << packet.version << "+"; // this shows version...?
-                    // Tuple isn't returning data
-                    // std::cout << "version is " << packetPtr->version;
+                    Packet subpacket;
+                    subpacket.assignData(newData, true); // true means is binary
+                    auto packetPtr = subpacket.getPacket();
                     subPackets.push_back(packetPtr);
-                    totalLength += length;
+                    totalLength += packetPtr->bitLength;
                     newData = _data.substr(totalLength);
                 }
                 this->bitLength = totalLength;
@@ -174,44 +160,33 @@ struct OperatorPacket : Packet {
             case 1:
                 // this is the number of subpackets (11 bits)
                 unsigned long subpacketNum = std::stoi(_data.substr(7, 11), nullptr, 2);
-                // std::cout << "Total subpacket number is " << subpacketNum << std::endl;
                 totalLength = 18;
                 newData = _data.substr(totalLength);
                 for (int _ = 0; _ < subpacketNum; _++) {
-                    // std::cout << "length: " << totalLength << " " << newData << std::endl;
-                    Packet packet;
-                    packet.assignData(newData, true); // true means is binary
-                    auto actualPacket = packet.getPacket();
-                    // std::cout << packet.version << "+"; // this shows version...?
-                    Packet *packetPtr;
-                    int length;
-                    int type;
-                    std::tie(packetPtr, length, type) = actualPacket;
-                    // std::cout << "version is " << packetPtr->version;
+                    Packet subpacket;
+                    subpacket.assignData(newData, true); // true means is binary
+                    Packet *packetPtr = subpacket.getPacket();
                     subPackets.push_back(packetPtr);
-                    totalLength += length;
+                    totalLength += packetPtr->bitLength;
                     newData = _data.substr(totalLength);
-                    // std::cout << std::endl << "Packet length was " << length << std::endl;
                 }
                 this->bitLength = totalLength;
                 break;
         }
     }
+
 };
 
-std::tuple<Packet*, int, int> Packet::getPacket() {
-    Packet *packet;
+Packet* Packet::getPacket() {
     unsigned int type = this->type;
-    switch (type) {
-        case 4:
-            packet = new LiteralValuePacket(this);
-            // std::cout << "packet version is " << this->version << std::endl;
-            return {packet, ((LiteralValuePacket*)packet)->getLengthInBits(), type};
-            break;
-        default:
-            packet = new OperatorPacket(this);
-            return {packet, ((OperatorPacket*)packet)->getLengthInBits(), type};
-            break;
+    if (type == 4) {
+        LiteralValuePacket* packet;
+        packet = new LiteralValuePacket(this);
+        return packet;
+    } else {
+        OperatorPacket* packet;
+        packet = new OperatorPacket(this);
+        return packet;
     }
 }
 
@@ -221,23 +196,33 @@ bool isType(const SrcType* src) {
   return dynamic_cast<const DstType*>(src) != nullptr;
 }
 
+void sumVersions(unsigned long &versionSum, Packet *packetPtr) {
+    Packet *currentPacket = packetPtr;
+    if (currentPacket->type != 4 && ((OperatorPacket*)currentPacket)->subPackets.size() != 0) {
+        for (Packet* p : ((OperatorPacket*)packetPtr)->subPackets) {
+            currentPacket = p;
+            versionSum += currentPacket->version;
+            sumVersions(versionSum, currentPacket);
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     // Insert code here! Use snippets -- "strs" = strings, "ints" = ints, "oth" = other
     Packet packet;
-    packet.assignData("A0016C880162017C3686B18A3D4780");
+    std::vector<std::string> strings = getStrings();
+    packet.assignData(strings[0]);
     auto actualPacket = packet.getPacket();
-    Packet *packetPtr;
-    int length;
-    int type;
-    std::tie(packetPtr, length, type) = actualPacket;
-    if (type == 4) {
+    Packet *packetPtr = actualPacket;
+    unsigned long sum = 0;
+    if (packetPtr->type == 4) {
         std::cout << "lvp with value ";
         std::cout << ((LiteralValuePacket*)packetPtr)->literalValue << std::endl;
     } else {
-        for (Packet* p : ((OperatorPacket*)packetPtr)->subPackets) {
-            // std::cout << p->version;
-        }
+        sum += packetPtr->version;
+        sumVersions(sum, packetPtr);
     }
+    std::cout << sum << std::endl;
     
     return 0;
 }
