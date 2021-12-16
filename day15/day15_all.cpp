@@ -197,6 +197,7 @@ void debugVisualization(PriorityQueue<N,double> frontier, N current, N next, std
         orderedFrontier.push_back(frontier.get());
     }
     std::pair<int,int> currentYX = current.first;
+    std::pair<int,int> nextYX = next.first;
     std::cout << "\033[H"; // cursor to top left
     int frontierColor = 5;
     for (int y = 0; y < map.size(); y++) {
@@ -213,7 +214,12 @@ void debugVisualization(PriorityQueue<N,double> frontier, N current, N next, std
                 std::cout << "\033[48;5;226m";
                 std::cout << map[y][x];
                 std::cout << "\033[0m";
-            } else if (std::find(orderedFrontier.begin(), orderedFrontier.end(), thisNode) != orderedFrontier.end()) {
+            } else if (nextYX.first == y && nextYX.second == x) {
+                std::cout << "\033[48;5;120m";
+                std::cout << map[y][x];
+                std::cout << "\033[0m";
+            }
+            else if (std::find(orderedFrontier.begin(), orderedFrontier.end(), thisNode) != orderedFrontier.end()) {
                 frontierColor += (int)(255 / orderedFrontier.size());
                 std::cout << "\033[48;2;0;" << frontierColor << ";" << frontierColor << "m";
                 std::cout << map[y][x];
