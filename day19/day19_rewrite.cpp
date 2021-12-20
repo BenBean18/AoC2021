@@ -175,7 +175,7 @@ std::vector<Possibility> allPossibilities(std::vector<Point> points) {
         i.p.resize(points.size());
     }
     for (int rot = 0; rot < 24; rot++) {
-        Matrix m = rotationMatrices[rot];
+        const Matrix m = rotationMatrices[rot];
         for (int base = 0; base < points.size(); base++) {
             std::vector<Point> possibility; // there will be 600 of these
             for (int p = 0; p < points.size(); p++) {
@@ -194,67 +194,55 @@ std::vector<Possibility> allPossibilities(std::vector<Point> points) {
 // was std::tuple<std::vector<Point>, std::function<Point(Point)>>
 std::tuple<std::vector<Point>, std::function<Point(Point)>> inCommon(std::vector<Point> scanner1, std::vector<Point> scanner2) {
     auto sc2 = allPossibilities(scanner2);
-    std::vector<Possibility> sc1;
-    std::vector<Point> t;
-    for (int i = 1; i < scanner1.size(); i++) {
-        t.push_back(scanner1[i] - scanner1[0]); // index 0 is base
-    }
-    sc1 = {{t, Matrix(), scanner1[0]}};
+    std::vector<Possibility> sc1 = allPossibilities(scanner1);
     std::vector<Point> toReturn(scanner1.size());
     Matrix transformRotation;
+    Matrix transformRotation1;
     Point transformPosition;
     Point transformBase;
-    for (auto p1 : sc1) { // scanner 1 is constant
+    for (auto p1 : sc1) { // scanner 1 is all possibilities
         std::sort(p1.p.begin(), p1.p.end());
-        for (int i = 0; i < sc2.size(); i++) { // scanner 2 is all possibilities
-            // for each possibility: point = sequence(orig) - sequence(base)
-            // for transformation:
-            // orig is what we have, unrotated p2 point
-            // point is what we want (corresponds to correctly rotated)
-            // base is p2.b, unrotated p2 point
-            // 
-            auto p2 = sc2[i];
-            auto p2c = sc2[i];
+        for (auto p2 : sc2) { // scanner 2 is all possibilities
             std::sort(p2.p.begin(), p2.p.end());
             std::vector<Point> inCommon(scanner1.size());
             auto it = std::set_intersection(p1.p.begin(), p1.p.end(), p2.p.begin(), p2.p.end(), inCommon.begin());
-            inCommon.resize(it-inCommon.begin()+1);
+            inCommon.resize(it-inCommon.begin());
             if (inCommon.size() >= 12) {
                 for (auto &p : inCommon) {
-                    p = p + scanner1[0]; // index 0 is base
+                    std::cout << scanner1[std::find(scanner1.begin(), scanner1.end(), Point(multiplyMatrices3x3And3x1(p1.r.transpose(), p)) + p1.b) - scanner1.begin()] << " ";
+                    p = Point(multiplyMatrices3x3And3x1(p1.r.transpose(), p)) + p1.b;
                 }
                 toReturn = inCommon;
-                transformRotation = p2c.r; // p2.r is the rotation from scanner2 (relative to base) to scanner1
-                transformPosition = scanner1[0];
-                transformBase = p2c.b;
-                Point t = {515,917,-361};
-                // std::cout << (sequence(t)[p2.r] - sequence(p2.b)[p2.r]) + scanner1[0] << std::endl; // this only works for the base, which is weird because it is the opposite of line 123
-                return {toReturn, [transformRotation,transformPosition,transformBase](Point p){ return (Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(p))) - Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(Point(transformBase))))) + transformPosition; }};
+                transformRotation = p2.r; // p2.r is the rotation from scanner2 (relative to base) to the rotated scanner1
+                transformRotation1 = p1.r; // p1.r is the rotation from scanner1 (relative to base) to the rotated scanner2
+                transformPosition = p1.b;
+                transformBase = p2.b;
+                return {toReturn, [transformRotation,transformRotation1,transformPosition,transformBase](Point p){ return Point(multiplyMatrices3x3And3x1(Matrix(transformRotation1).transpose(), (Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(p))) - Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(Point(transformBase))))))) + transformPosition; }};
                 // return toReturn;
             }
         }
     }
-    // return {toReturn, [transformRotation,transformPosition](Point p){ return sequence(p)[transformRotation] + transformPosition; }};
+    return {{}, std::function<Point(Point)>()};
 }
 
 int main(int argc, char** argv) {
     auto scanners = parseInput();
-    // for (Point p : sequence({'x','y','z'})) {
-    //     std::cout << "{" << (p.x < 0 ? "-" : "") << (char)abs(p.x) << "," << (p.y < 0 ? "-" : "") << (char)abs(p.y) << "," << (p.z < 0 ? "-" : "") << (char)abs(p.z) << "}" << ",";
-    // }
-    // std::sort(scanners[0].begin(), scanners[0].end());
-    // std::sort(scanners[1].begin(), scanners[1].end());
-    // std::cout << scanners[0][0] << " " << scanners[1][0];
-    // int i = 20;
-    // Matrix m = multiplyMatrices3x3And3x1(Matrix(rotationMatrices[i]).transpose(), multiplyMatrices3x3And3x1(Matrix(rotationMatrices[i]), Matrix({{1},{2},{3}})));
-    // std::cout << m;
     auto common = inCommon(scanners[0], scanners[1]);
     std::vector<Point> pts;
-    std::function<Point(Point)> transform;
-    std::tie(pts, transform) = common;
+    std::function<Point(Point)> transform1To0;
+    std::tie(pts, transform1To0) = common;
     for (Point p : pts) {
         std::cout << p << std::endl;
     }
-    std::cout << transform({553,889,-390});
+    std::cout << std::endl << transform1To0({-322,571,750}) << std::endl << std::endl;
+    common = {};
+    common = inCommon(scanners[1], scanners[4]);
+    pts = {};
+    std::function<Point(Point)> transform4To1;
+    std::tie(pts, transform4To1) = common;
+    for (Point p : pts) {
+        std::cout << transform1To0(p) << std::endl; // I was doing transform4To1(transform1To0(p)), but IT'S ALREADY IN SCANNER 1'S FRAME...
+        // and now I feel silly 
+    }
     return 0;
 }
