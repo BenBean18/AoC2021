@@ -4,6 +4,7 @@
 #include <cassert>
 #include <algorithm>
 #include <regex>
+#include <set>
 
 struct Matrix {
     std::vector<std::vector<int>> d; // d is for data, that's good enough for me
@@ -209,7 +210,6 @@ std::tuple<std::vector<Point>, std::function<Point(Point)>> inCommon(std::vector
             inCommon.resize(it-inCommon.begin());
             if (inCommon.size() >= 12) {
                 for (auto &p : inCommon) {
-                    std::cout << scanner1[std::find(scanner1.begin(), scanner1.end(), Point(multiplyMatrices3x3And3x1(p1.r.transpose(), p)) + p1.b) - scanner1.begin()] << " ";
                     p = Point(multiplyMatrices3x3And3x1(p1.r.transpose(), p)) + p1.b;
                 }
                 toReturn = inCommon;
@@ -227,22 +227,90 @@ std::tuple<std::vector<Point>, std::function<Point(Point)>> inCommon(std::vector
 
 int main(int argc, char** argv) {
     auto scanners = parseInput();
+
     auto common = inCommon(scanners[0], scanners[1]);
     std::vector<Point> pts;
-    std::function<Point(Point)> transform1To0;
-    std::tie(pts, transform1To0) = common;
-    for (Point p : pts) {
-        std::cout << p << std::endl;
+    std::function<Point(Point)> transform1;
+    std::tie(pts, transform1) = common;
+    int found = 0;
+    for (Point p : scanners[1]) {
+        if (std::find(pts.begin(), pts.end(), transform1(p)) != pts.end()) {
+            found++;
+        }
     }
-    std::cout << std::endl << transform1To0({-322,571,750}) << std::endl << std::endl;
-    common = {};
+    std::cout << "found " << found << std::endl;
     common = inCommon(scanners[1], scanners[4]);
-    pts = {};
-    std::function<Point(Point)> transform4To1;
-    std::tie(pts, transform4To1) = common;
-    for (Point p : pts) {
-        std::cout << transform1To0(p) << std::endl; // I was doing transform4To1(transform1To0(p)), but IT'S ALREADY IN SCANNER 1'S FRAME...
-        // and now I feel silly 
+    std::function<Point(Point)> transform4;
+    std::tie(pts, transform4) = common;
+    found = 0;
+    for (Point p : scanners[4]) {
+        found += std::find(pts.begin(), pts.end(), transform4(p)) != pts.end();
+    }
+    std::cout << "found " << found << std::endl;
+
+    std::set<Point> uniquePoints;
+    std::vector<std::function<Point(Point)>> transforms(scanners.size()); // transforms[scanner] is the function to transform that scanner to 0
+    std::vector<bool> transformFound(scanners.size()); // if transformFound[scanner] is false, there is no transform yet
+    int transformsFound = 0;
+    std::vector<int> bIndices;
+    for (int i = 0; i < scanners.size(); i++) {
+        bIndices.push_back(i);
+    }
+    // account for the fact that 0 is the base transform
+    transforms[0] = [](Point p){ return p; };
+    bIndices.erase(bIndices.begin()+0);
+    transformsFound++;
+    transformFound[0] = true;
+    for (Point p : scanners[0]) {
+        uniquePoints.insert(p);
+    }
+
+    std::map<std::pair<int,int>,bool> noOverlap; // if noOverlap[{a,b}] is true, don't bother checking
+
+    while (transformsFound < scanners.size()) {
+        for (int a = 0; a < scanners.size(); a++) {
+            if (!transformFound[a]) {
+                continue;
+            }
+            bool matchFound = false;
+            for (int b : bIndices) {
+                if (a == b) { // or noOverlap[{a,b}]
+                    continue;
+                }
+                std::cout << "trying " << a << " -> " << b << "...";
+                auto common = inCommon(scanners[a], scanners[b]);
+                std::vector<Point> pts;
+                std::function<Point(Point)> transform;
+                std::tie(pts, transform) = common;
+                if (pts.size() != 0) {
+                    transforms[b] = [a,transform,transforms](Point p){ return transforms[a](transform(p)); };
+                    if (std::find(scanners[0].begin(),scanners[0].end(),transforms[a](scanners[a][0])) == scanners[0].end()) {
+                        std::cout << transforms[b](pts[0]) << " not in list. " << a << " -> " << b << std::endl;
+                    }
+                    for (Point p : scanners[b]) {
+                        uniquePoints.insert(transforms[b](p));
+                    }
+                    transformFound[b] = true;
+                    transformsFound += 1;
+                    bIndices.erase(std::remove(bIndices.begin(), bIndices.end(), b), bIndices.end());
+                    std::cout << "match" << std::endl;
+                    matchFound = true;
+                    break;
+                } else {
+                    noOverlap[{a,b}] = true;
+                    std::cout << std::endl;
+                }
+            }
+            if (matchFound) {
+                break;
+            }
+        }
+        for (int i = 0; i < transformFound.size(); i++) {
+            if (!transformFound[i]) {
+                std::cout << i << " ";
+            }
+        }
+        std::cout << "-- " << uniquePoints.size() << " points so far" << std::endl;
     }
     return 0;
 }
