@@ -93,7 +93,10 @@ inline bool operator==(Point a, Point b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
 inline bool operator<(Point a, Point b) {
-    return (a.x+a.y+a.z) < (b.x+b.y+b.z);
+    return (a.x*3+a.y*2+a.z) < (b.x*3+b.y*2+b.z);
+}
+inline bool operator>(Point a, Point b) {
+    return (a.x*3+a.y*2+a.z) > (b.x*3+b.y*2+b.z);
 }
 
 Matrix multiplyMatrices3x3And3x1(Matrix a3, Matrix b1) {
@@ -180,9 +183,10 @@ std::vector<Possibility> allPossibilities(std::vector<Point> points) {
         for (int base = 0; base < points.size(); base++) {
             std::vector<Point> possibility; // there will be 600 of these
             for (int p = 0; p < points.size(); p++) {
-                auto pr = Point(multiplyMatrices3x3And3x1(m, Matrix(points[p])));
-                auto br = Point(multiplyMatrices3x3And3x1(m, Matrix(points[base])));
-                Point current = pr - br;
+                // auto pr = Point(multiplyMatrices3x3And3x1(m, Matrix(points[p])));
+                // auto br = Point(multiplyMatrices3x3And3x1(m, Matrix(points[base])));
+                // Point current = pr - br;
+                Point current = Point(multiplyMatrices3x3And3x1(m, Matrix(points[p]-points[base])));
                 possibility.push_back(current);
             }
             possibilities.push_back({possibility, Matrix(m), points[base]});
@@ -195,20 +199,32 @@ std::vector<Possibility> allPossibilities(std::vector<Point> points) {
 // was std::tuple<std::vector<Point>, std::function<Point(Point)>>
 std::tuple<std::vector<Point>, std::function<Point(Point)>> inCommon(std::vector<Point> scanner1, std::vector<Point> scanner2) {
     auto sc2 = allPossibilities(scanner2);
-    std::vector<Possibility> sc1 = allPossibilities(scanner1);
+    auto sc1 = allPossibilities(scanner1);
     std::vector<Point> toReturn(scanner1.size());
     Matrix transformRotation;
     Matrix transformRotation1;
     Point transformPosition;
     Point transformBase;
     for (auto p1 : sc1) { // scanner 1 is all possibilities
-        std::sort(p1.p.begin(), p1.p.end());
         for (auto p2 : sc2) { // scanner 2 is all possibilities
+            std::sort(p1.p.begin(), p1.p.end());
             std::sort(p2.p.begin(), p2.p.end());
-            std::vector<Point> inCommon(scanner1.size());
-            auto it = std::set_intersection(p1.p.begin(), p1.p.end(), p2.p.begin(), p2.p.end(), inCommon.begin());
-            inCommon.resize(it-inCommon.begin());
+            std::vector<Point> inCommon;
+            auto it = std::set_intersection(p2.p.begin(), p2.p.end(), p1.p.begin(), p1.p.end(), std::back_inserter(inCommon));
+            // inCommon.resize(it-inCommon.begin());
             if (inCommon.size() >= 12) {
+                for (Point p : p1.p) {
+                    std::cout << p << " ";
+                }
+                std::cout << std::endl;
+                for (Point p : p2.p) {
+                    std::cout << p << " ";
+                }
+                std::cout << std::endl;
+                for (Point p : inCommon) {
+                    assert(std::find(p2.p.begin(), p2.p.end(), p) != p2.p.end());
+                    assert(std::find(p1.p.begin(), p1.p.end(), p) != p1.p.end());
+                }
                 for (auto &p : inCommon) {
                     p = Point(multiplyMatrices3x3And3x1(p1.r.transpose(), p)) + p1.b;
                 }
