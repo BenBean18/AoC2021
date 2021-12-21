@@ -56,9 +56,9 @@ Matrix Matrix::transpose() {
 }
 
 struct Point {
-    int x;
-    int y;
-    int z;
+    int16_t x;
+    int16_t y;
+    int16_t z;
     Point() {
 
     }
@@ -76,6 +76,9 @@ struct Point {
     operator Matrix() {
         return Matrix({{x},{y},{z}});
     }
+    long hash() {
+        return ((unsigned long)this->x)*30UL+((unsigned long)this->y)*20UL+((unsigned long)this->z);
+    }
 };
 inline Point operator+(Point a, Point b) {
     return {a.x+b.x, a.y+b.y, a.z+b.z};
@@ -92,11 +95,11 @@ std::ostream &operator<<(std::ostream &os, Point const &p) {
 inline bool operator==(Point a, Point b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-inline bool operator<(Point a, Point b) {
-    return (a.x*3+a.y*2+a.z) < (b.x*3+b.y*2+b.z);
+inline bool operator<(Point a, Point b) { // there was a problem with this and the greater than operator, there were not unique values
+    return a.hash() < b.hash();
 }
 inline bool operator>(Point a, Point b) {
-    return (a.x*3+a.y*2+a.z) > (b.x*3+b.y*2+b.z);
+    return a.hash() < b.hash();
 }
 
 Matrix multiplyMatrices3x3And3x1(Matrix a3, Matrix b1) {
@@ -195,11 +198,33 @@ std::vector<Possibility> allPossibilities(std::vector<Point> points) {
     return possibilities;
 }
 
+std::vector<Possibility> basePossibilities(std::vector<Point> points) { 
+    std::vector<Possibility> possibilities; // 24 rotations * how many possible relative offsets
+    for (auto &i : possibilities) {
+        i.p.resize(points.size());
+    }
+    for (int rot = 0; rot < 1; rot++) {
+        const Matrix m = rotationMatrices[rot];
+        for (int base = 0; base < points.size(); base++) {
+            std::vector<Point> possibility; // there will be 600 of these
+            for (int p = 0; p < points.size(); p++) {
+                // auto pr = Point(multiplyMatrices3x3And3x1(m, Matrix(points[p])));
+                // auto br = Point(multiplyMatrices3x3And3x1(m, Matrix(points[base])));
+                // Point current = pr - br;
+                Point current = points[p] - points[base];
+                possibility.push_back(current);
+            }
+            possibilities.push_back({possibility, Matrix(m), points[base]});
+        }
+    }
+    return possibilities;
+}
+
 // returns {inCommon, transformFunctionFromScanner2ToScanner1}
 // was std::tuple<std::vector<Point>, std::function<Point(Point)>>
 std::tuple<std::vector<Point>, std::function<Point(Point)>> inCommon(std::vector<Point> scanner1, std::vector<Point> scanner2) {
     auto sc2 = allPossibilities(scanner2);
-    auto sc1 = allPossibilities(scanner1);
+    auto sc1 = basePossibilities(scanner1);
     std::vector<Point> toReturn(scanner1.size());
     Matrix transformRotation;
     Matrix transformRotation1;
@@ -213,27 +238,19 @@ std::tuple<std::vector<Point>, std::function<Point(Point)>> inCommon(std::vector
             auto it = std::set_intersection(p2.p.begin(), p2.p.end(), p1.p.begin(), p1.p.end(), std::back_inserter(inCommon));
             // inCommon.resize(it-inCommon.begin());
             if (inCommon.size() >= 12) {
-                for (Point p : p1.p) {
-                    std::cout << p << " ";
-                }
-                std::cout << std::endl;
-                for (Point p : p2.p) {
-                    std::cout << p << " ";
-                }
-                std::cout << std::endl;
                 for (Point p : inCommon) {
                     assert(std::find(p2.p.begin(), p2.p.end(), p) != p2.p.end());
                     assert(std::find(p1.p.begin(), p1.p.end(), p) != p1.p.end());
                 }
                 for (auto &p : inCommon) {
-                    p = Point(multiplyMatrices3x3And3x1(p1.r.transpose(), p)) + p1.b;
+                    p = p + p1.b;
                 }
                 toReturn = inCommon;
                 transformRotation = p2.r; // p2.r is the rotation from scanner2 (relative to base) to the rotated scanner1
                 transformRotation1 = p1.r; // p1.r is the rotation from scanner1 (relative to base) to the rotated scanner2
                 transformPosition = p1.b;
                 transformBase = p2.b;
-                return {toReturn, [transformRotation,transformRotation1,transformPosition,transformBase](Point p){ return Point(multiplyMatrices3x3And3x1(Matrix(transformRotation1).transpose(), (Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(p))) - Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(Point(transformBase))))))) + transformPosition; }};
+                return {toReturn, [transformRotation,transformRotation1,transformPosition,transformBase](Point p){ return (Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(p))) - Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(Point(transformBase))))) + transformPosition; }};
                 // return toReturn;
             }
         }
@@ -241,30 +258,18 @@ std::tuple<std::vector<Point>, std::function<Point(Point)>> inCommon(std::vector
     return {{}, std::function<Point(Point)>()};
 }
 
-int main(int argc, char** argv) {
-    auto scanners = parseInput();
-
-    auto common = inCommon(scanners[0], scanners[1]);
-    std::vector<Point> pts;
-    std::function<Point(Point)> transform1;
-    std::tie(pts, transform1) = common;
-    int found = 0;
-    for (Point p : scanners[1]) {
-        if (std::find(pts.begin(), pts.end(), transform1(p)) != pts.end()) {
-            found++;
+template <typename T>
+struct MemoryEfficientSet : public std::vector<T> {
+    void insert(T el) {
+        if (std::find(this->begin(), this->end(), el) == this->end()) {
+            this->push_back(el);
         }
     }
-    std::cout << "found " << found << std::endl;
-    common = inCommon(scanners[1], scanners[4]);
-    std::function<Point(Point)> transform4;
-    std::tie(pts, transform4) = common;
-    found = 0;
-    for (Point p : scanners[4]) {
-        found += std::find(pts.begin(), pts.end(), transform4(p)) != pts.end();
-    }
-    std::cout << "found " << found << std::endl;
+};
 
-    std::set<Point> uniquePoints;
+int main(int argc, char** argv) {
+    auto scanners = parseInput();
+    MemoryEfficientSet<Point> uniquePoints;
     std::vector<std::function<Point(Point)>> transforms(scanners.size()); // transforms[scanner] is the function to transform that scanner to 0
     std::vector<bool> transformFound(scanners.size()); // if transformFound[scanner] is false, there is no transform yet
     int transformsFound = 0;
@@ -290,19 +295,17 @@ int main(int argc, char** argv) {
             }
             bool matchFound = false;
             for (int b : bIndices) {
-                if (a == b) { // or noOverlap[{a,b}]
+                if (a == b || noOverlap[{a,b}]) {
                     continue;
                 }
                 std::cout << "trying " << a << " -> " << b << "...";
                 auto common = inCommon(scanners[a], scanners[b]);
+                std::cout << "tried...";
                 std::vector<Point> pts;
                 std::function<Point(Point)> transform;
                 std::tie(pts, transform) = common;
                 if (pts.size() != 0) {
                     transforms[b] = [a,transform,transforms](Point p){ return transforms[a](transform(p)); };
-                    if (std::find(scanners[0].begin(),scanners[0].end(),transforms[a](scanners[a][0])) == scanners[0].end()) {
-                        std::cout << transforms[b](pts[0]) << " not in list. " << a << " -> " << b << std::endl;
-                    }
                     for (Point p : scanners[b]) {
                         uniquePoints.insert(transforms[b](p));
                     }
