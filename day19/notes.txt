@@ -1,0 +1,39 @@
+Need to check if relative positions from all beacons match relative from first beacon
+--- scanner 0 ---
+0,2 --------------> 0,0  or -4,1 or -3,-1
+4,1 --------------> 4,-1 or 0,0  or 1,-2
+3,3 --------------> 3,1  or -1,2 or 0,0
+(extra) 2,2 ------> 2,0  or -2,1 or -1,-1
+
+--- scanner 1 ---
+-1,-1 ------------> 0,0
+-5,0 -------------> -4,1
+-2,1 -------------> -1,2
+(extra) 2,2 ------> 3,3
+
+If a beacon doesn't match in any relative value (or orientation for the actual example), it doesn't line up (e.g. 3,3 does not match 2,0 or -2,1 or -1,-1)
+For the ones that match,
+    Add them to a set (unique values) of beacons, relative to scanner 0
+    Get scanner position relative to scanner 0, using the (0,0) beacon
+
+Drawing x increasing rightward, y increasing upward, scanners as S, and beacons as B, scanner 0 detects this:
+
+...B.
+B....
+....B
+S....
+Scanner 1 detects this:
+
+...B..
+B....S
+....B.
+For this example, assume scanners only need 3 overlapping beacons. Then, the beacons visible to both scanners overlap to produce the following complete map:
+
+...B..
+B....S
+....B.
+S.....
+
+
+
+-4,0,1 -1,0,2 0,0,0
