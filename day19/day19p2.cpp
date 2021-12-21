@@ -79,6 +79,11 @@ struct Point {
     long hash() {
         return ((unsigned long)this->x)*30UL+((unsigned long)this->y)*20UL+((unsigned long)this->z);
     }
+    void operator+=(Point p) {
+        this->x += p.x;
+        this->y += p.y;
+        this->z += p.z;
+    }
 };
 inline Point operator+(Point a, Point b) {
     return {a.x+b.x, a.y+b.y, a.z+b.z};
@@ -102,7 +107,7 @@ inline bool operator>(Point a, Point b) {
     return a.hash() < b.hash();
 }
 
-Matrix multiplyMatrices3x3And3x1(Matrix a3, Matrix b1) {
+Matrix multiplyMatrices3x3And3x1(const Matrix a3, const Matrix b1) {
     Matrix c{};
     for (auto row : a3.d) {
         c.d.push_back({row[0]*b1.d[0][0] + row[1]*b1.d[1][0] + row[2]*b1.d[2][0]});
@@ -162,7 +167,7 @@ std::vector<std::vector<Point>> parseInput() {
     return scanners;
 }
 
-std::vector<Point> relative(std::vector<Point> points, Point base) {
+std::vector<Point> relative(const std::vector<Point> points, const Point base) {
     std::vector<Point> relativePoints;
     for (Point p : points) {
         relativePoints.push_back(p - base);
@@ -176,7 +181,7 @@ struct Possibility {
     Point b; // base
 };
 
-std::vector<Possibility> allPossibilities(std::vector<Point> points) { 
+std::vector<Possibility> allPossibilities(const std::vector<Point> points) { 
     std::vector<Possibility> possibilities; // 24 rotations * how many possible relative offsets
     for (auto &i : possibilities) {
         i.p.resize(points.size());
@@ -189,16 +194,16 @@ std::vector<Possibility> allPossibilities(std::vector<Point> points) {
                 // auto pr = Point(multiplyMatrices3x3And3x1(m, Matrix(points[p])));
                 // auto br = Point(multiplyMatrices3x3And3x1(m, Matrix(points[base])));
                 // Point current = pr - br;
-                Point current = Point(multiplyMatrices3x3And3x1(m, Matrix(points[p]-points[base])));
+                Point current = multiplyMatrices3x3And3x1(m, Matrix(points[p]-points[base]));
                 possibility.push_back(current);
             }
-            possibilities.push_back({possibility, Matrix(m), points[base]});
+            possibilities.push_back({possibility, m, points[base]});
         }
     }
     return possibilities;
 }
 
-std::vector<Possibility> basePossibilities(std::vector<Point> points) { 
+std::vector<Possibility> basePossibilities(const std::vector<Point> points) { 
     std::vector<Possibility> possibilities; // 24 rotations * how many possible relative offsets
     for (auto &i : possibilities) {
         i.p.resize(points.size());
@@ -214,7 +219,7 @@ std::vector<Possibility> basePossibilities(std::vector<Point> points) {
                 Point current = points[p] - points[base];
                 possibility.push_back(current);
             }
-            possibilities.push_back({possibility, Matrix(m), points[base]});
+            possibilities.push_back({possibility, m, points[base]});
         }
     }
     return possibilities;
@@ -236,10 +241,10 @@ struct Transform {
     }
 };
 
-std::function<Point(Point,Matrix,Matrix,Point,Point)> transformFn_ = [](Point p, Matrix transformRotation, Matrix transformRotation1, Point transformPosition, Point transformBase){ return (Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(p))) - Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(Point(transformBase))))) + transformPosition; };
+std::function<Point(Point,Matrix,Matrix,Point,Point)> transformFn_ = [](Point p, Matrix transformRotation, Matrix transformRotation1, Point transformPosition, Point transformBase){ return (Point(multiplyMatrices3x3And3x1(transformRotation, Matrix(p))) - Point(multiplyMatrices3x3And3x1(transformRotation, Matrix(Point(transformBase))))) + transformPosition; };
 std::function<Point(Point,Transform)> transformFn = [](Point p, Transform t){ return transformFn_(p, t.transformRotation, t.transformRotation1, t.transformPosition, t.transformBase); };
 
-Point runTransform(Point p, std::vector<Transform> ts) {
+Point runTransform(const Point p, const std::vector<Transform> ts) {
     Point currentPoint = p;
     for (int i = ts.size()-1; i >= 0; i--) {
         currentPoint = transformFn(currentPoint, ts[i]);
@@ -249,7 +254,7 @@ Point runTransform(Point p, std::vector<Transform> ts) {
 
 // returns {inCommon, transformFunctionFromScanner2ToScanner1}
 // was std::tuple<std::vector<Point>, std::function<Point(Point)>>
-std::tuple<std::vector<Point>, Transform> inCommon(std::vector<Point> scanner1, std::vector<Point> scanner2) {
+std::tuple<std::vector<Point>, Transform> inCommon(const std::vector<Point> scanner1, const std::vector<Point> scanner2) {
     auto sc2 = allPossibilities(scanner2);
     auto sc1 = basePossibilities(scanner1);
     std::vector<Point> toReturn(scanner1.size());
@@ -270,7 +275,7 @@ std::tuple<std::vector<Point>, Transform> inCommon(std::vector<Point> scanner1, 
                     assert(std::find(p1.p.begin(), p1.p.end(), p) != p1.p.end());
                 }
                 for (auto &p : inCommon) {
-                    p = p + p1.b;
+                    p += p1.b;
                 }
                 toReturn = inCommon;
                 transformRotation = p2.r; // p2.r is the rotation from scanner2 (relative to base) to the rotated scanner1
@@ -361,6 +366,7 @@ int main(int argc, char** argv) {
                     break;
                 } else {
                     noOverlap[a*scanners.size()+b] = true;
+                    noOverlap[b*scanners.size()+a] = true;
                     std::cout << std::endl;
                 }
             }
