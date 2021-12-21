@@ -220,9 +220,36 @@ std::vector<Possibility> basePossibilities(std::vector<Point> points) {
     return possibilities;
 }
 
+struct Transform {
+    Matrix transformRotation;
+    Matrix transformRotation1;
+    Point transformPosition;
+    Point transformBase;
+    Transform() {
+        
+    }
+    Transform(Matrix tr, Matrix tr1, Point tp, Point tb) {
+        transformRotation = tr;
+        transformRotation1 = tr1;
+        transformPosition = tp;
+        transformBase = tb;
+    }
+};
+
+std::function<Point(Point,Matrix,Matrix,Point,Point)> transformFn_ = [](Point p, Matrix transformRotation, Matrix transformRotation1, Point transformPosition, Point transformBase){ return (Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(p))) - Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(Point(transformBase))))) + transformPosition; };
+std::function<Point(Point,Transform)> transformFn = [](Point p, Transform t){ return transformFn_(p, t.transformRotation, t.transformRotation1, t.transformPosition, t.transformBase); };
+
+Point runTransform(Point p, std::vector<Transform> ts) {
+    Point currentPoint = p;
+    for (int i = ts.size()-1; i >= 0; i--) {
+        currentPoint = transformFn(currentPoint, ts[i]);
+    }
+    return currentPoint;
+}
+
 // returns {inCommon, transformFunctionFromScanner2ToScanner1}
 // was std::tuple<std::vector<Point>, std::function<Point(Point)>>
-std::tuple<std::vector<Point>, std::function<Point(Point)>> inCommon(std::vector<Point> scanner1, std::vector<Point> scanner2) {
+std::tuple<std::vector<Point>, Transform> inCommon(std::vector<Point> scanner1, std::vector<Point> scanner2) {
     auto sc2 = allPossibilities(scanner2);
     auto sc1 = basePossibilities(scanner1);
     std::vector<Point> toReturn(scanner1.size());
@@ -250,12 +277,12 @@ std::tuple<std::vector<Point>, std::function<Point(Point)>> inCommon(std::vector
                 transformRotation1 = p1.r; // p1.r is the rotation from scanner1 (relative to base) to the rotated scanner2
                 transformPosition = p1.b;
                 transformBase = p2.b;
-                return {toReturn, [transformRotation,transformRotation1,transformPosition,transformBase](Point p){ return (Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(p))) - Point(multiplyMatrices3x3And3x1(Matrix(transformRotation), Matrix(Point(transformBase))))) + transformPosition; }};
+                return {toReturn, Transform(p2.r, p1.r, p1.b, p2.b)};
                 // return toReturn;
             }
         }
     }
-    return {{}, std::function<Point(Point)>()};
+    return {{}, Transform()};
 }
 
 template <typename T>
@@ -270,7 +297,7 @@ struct MemoryEfficientSet : public std::vector<T> {
 int main(int argc, char** argv) {
     auto scanners = parseInput();
     MemoryEfficientSet<Point> uniquePoints;
-    std::vector<std::function<Point(Point)>> transforms(scanners.size()); // transforms[scanner] is the function to transform that scanner to 0
+    std::vector<std::vector<Transform>> transforms(scanners.size()); // transforms[scanner] is the function to transform that scanner to 0
     std::vector<bool> transformFound(scanners.size()); // if transformFound[scanner] is false, there is no transform yet
     int transformsFound = 0;
     std::vector<int> bIndices;
@@ -278,7 +305,7 @@ int main(int argc, char** argv) {
         bIndices.push_back(i);
     }
     // account for the fact that 0 is the base transform
-    transforms[0] = [](Point p){ return p; };
+    transforms[0] = {Transform(rotationMatrices[0], rotationMatrices[0], Point(0,0,0), Point(0,0,0))};
     bIndices.erase(bIndices.begin()+0);
     transformsFound++;
     transformFound[0] = true;
@@ -286,7 +313,7 @@ int main(int argc, char** argv) {
         uniquePoints.insert(p);
     }
 
-    std::map<std::pair<int,int>,bool> noOverlap; // if noOverlap[{a,b}] is true, don't bother checking
+    std::vector<bool> noOverlap(scanners.size()*scanners.size()+scanners.size()); // if noOverlap[a*scanners.size()+b] is true, don't bother checking
 
     while (transformsFound < scanners.size()) {
         for (int a = 0; a < scanners.size(); a++) {
@@ -295,28 +322,39 @@ int main(int argc, char** argv) {
             }
             bool matchFound = false;
             for (int b : bIndices) {
-                if (a == b || noOverlap[{a,b}]) {
+                if (a == b || noOverlap[a*scanners.size()+b]) {
                     continue;
                 }
                 std::cout << "trying " << a << " -> " << b << "...";
                 auto common = inCommon(scanners[a], scanners[b]);
                 std::cout << "tried...";
                 std::vector<Point> pts;
-                std::function<Point(Point)> transform;
+                Transform transform;
                 std::tie(pts, transform) = common;
+                std::cout << " 1 ";
+                std::flush(std::cout);
                 if (pts.size() != 0) {
-                    transforms[b] = [a,transform,transforms](Point p){ return transforms[a](transform(p)); };
+                    transforms[b] = transforms[a];
+                    transforms[b].push_back(transform);
+                    std::cout << " 2 ";
+                    std::flush(std::cout);
                     for (Point p : scanners[b]) {
-                        uniquePoints.insert(transforms[b](p));
+                        uniquePoints.insert(runTransform(p, transforms[b]));
                     }
+                    std::cout << " 3 ";
+                    std::flush(std::cout);
                     transformFound[b] = true;
+                    std::cout << " 4 ";
+                    std::flush(std::cout);
                     transformsFound += 1;
                     bIndices.erase(std::remove(bIndices.begin(), bIndices.end(), b), bIndices.end());
+                    std::cout << " 5 ";
+                    std::flush(std::cout);
                     std::cout << "match" << std::endl;
                     matchFound = true;
                     break;
                 } else {
-                    noOverlap[{a,b}] = true;
+                    noOverlap[a*scanners.size()+b] = true;
                     std::cout << std::endl;
                 }
             }
