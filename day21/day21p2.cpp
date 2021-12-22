@@ -2,6 +2,8 @@
 #include <fstream>
 #include <vector>
 #include <map>
+#include <algorithm>
+#include <cassert>
 
 std::vector<std::string> getStrings() {
     std::vector<std::string> strings;
@@ -42,74 +44,106 @@ std::vector<int> getInts() {
 int rollCount = 0;
 
 struct Game {
-    int p1Square;
-    int p2Square;
-    int p1Score = 0;
-    int p2Score = 0;
-    bool p1Turn = true;
-    Game(int p1, int p2) {
+    unsigned int p1Square;
+    unsigned int p2Square;
+    unsigned int p1Score = 0;
+    unsigned int p2Score = 0;
+    bool p1Turn;
+    int ws;
+    Game(int p1, int p2, bool p1Turn, int winningScore = 21) {
         p1Square = p1;
         p2Square = p2;
+        ws = winningScore;
+        this->p1Turn = p1Turn;
     }
+    bool hasAnyoneWon() {
+        if (p1Score >= ws || p2Score >= ws) {
+            return true;
+        }
+        return false;
+    }
+    Game nextState(int r) {
+        Game g(*this);
+        if (g.p1Turn) {
+            g.p1Square += r;
+            g.p1Square--;
+            g.p1Square = g.p1Square % 10;
+            g.p1Square++;
+            g.p1Score += g.p1Square;
+            g.p1Turn = false;
+        } else {
+            g.p2Square += r;
+            g.p2Square--;
+            g.p2Square = g.p2Square % 10;
+            g.p2Square++;
+            g.p2Score += g.p2Square;
+            g.p1Turn = true;
+        }
+        return g;
+    }
+    unsigned long long hash();
 };
+unsigned long long hashStr(const char* s, unsigned long long salt)
+{
+    unsigned long long h = salt;
+    while (*s)
+        h = h * 101 + (unsigned long long) *s++;
+    return h;
+}
+unsigned long long Game::hash() {
+    std::string s{(char)p1Square, (char)p2Square, (char)p1Score, (char)p2Score, p1Turn};
+    return hashStr(s.c_str(), 1234);
+}
 inline bool operator<(Game a, Game b) {
-    return (a.p1Square*40 + a.p2Square*30 + a.p1Score*20 + a.p2Score*10) < (b.p1Square*40 + b.p2Square*30 + b.p1Score*20 + b.p2Score*10);
+    return a.hash() < b.hash();
 }
 
 // can roll 3 (1/27),4 (3/27),5 (6/27),6 (7/27),7 (6/27),8 (3/27),9 (1/27) (7 total states)
 std::vector<int> rolls{3, 4, 5, 4, 5, 6, 5, 6, 7, 4, 5, 6, 5, 6, 7, 6, 7, 8, 5, 6, 7, 6, 7, 8, 7, 8, 9};
 
 using ull = unsigned long long;
-std::map<std::pair<Game, int>, int> memo; // value = int (winner), key=<Game (state before),int (roll)>
-std::map<std::pair<Game, int>, bool> inMemo; // key = memo key, value = in memo or not
+std::map<Game, ull> states; // value = how many in that state, key = state
+ull p1Count = 0;
+ull p2Count = 0;
 
-std::pair<ull, ull> roll(Game game, int winningScore = 21, unsigned long long recursionDepth = 0) {
-    std::pair<ull, ull> sum{0,0};
-    for (int r : rolls) {
-        std::cout << recursionDepth << ":" << r << " ";
-        Game g((const Game)game);
-        if (!inMemo[{game,r}]) {
-            if (g.p1Turn) {
-                g.p1Square += r;
-                g.p1Square %= 10;
-                g.p1Score += g.p1Square + 1;
-                g.p1Turn = false;
-                if (g.p1Score >= winningScore) {
-                    g.p1Score = 0;
-                    sum.first++;
-                    memo[{game,r}] = 1;
-                    inMemo[{game,r}] = true;
+std::pair<ull, ull> roll(Game game) {
+    states[game] = 1;
+    while (std::count_if(states.begin(), states.end(), [](auto el){ return el.second > 0; }) > 0) {
+        std::map<Game, ull> statesCopy{};
+        for (auto el : states) {
+            for (int r : rolls) {
+                Game g = el.first;
+                if (g.p1Turn) {
+                    g.p1Square += r;
+                    g.p1Square--;
+                    g.p1Square = g.p1Square % 10;
+                    g.p1Square++;
+                    g.p1Score += g.p1Square;
+                    g.p1Turn = false;
+                    if (g.p1Score >= game.ws) {
+                        p1Count += el.second;
+                    } else {
+                        statesCopy[g] += el.second;
+                    }
                 } else {
-                    auto res = roll(g, winningScore, recursionDepth+1);
-                    sum.first += res.first;
-                    sum.second += res.second;
+                    g.p2Square += r;
+                    g.p2Square--;
+                    g.p2Square = g.p2Square % 10;
+                    g.p2Square++;
+                    g.p2Score += g.p2Square;
+                    g.p1Turn = true;
+                    if (g.p2Score >= game.ws) {
+                        p2Count += el.second;
+                    } else {
+                        statesCopy[g] += el.second;
+                    }
                 }
-            } else {
-                g.p2Square += r;
-                g.p2Square %= 10;
-                g.p2Score += g.p2Square + 1;
-                g.p1Turn = true;
-                if (g.p2Score >= winningScore) {
-                    g.p2Score = 0;
-                    sum.second++;
-                    memo[{game,r}] = 2;
-                    inMemo[{game,r}] = true;
-                } else {
-                    auto res = roll(g, winningScore, recursionDepth+1);
-                    sum.first += res.first;
-                    sum.second += res.second;
-                }
-            }
-        } else {
-            auto res = memo[{game,r}];
-            if (res == 1) {
-                sum.first++;
-            } else {
-                sum.second++;
+                assert(g.p1Turn != el.first.p1Turn);
             }
         }
+        states = statesCopy;
     }
-    return sum;
+    return {p1Count, p2Count};
 }
 
 // Try the lanternfish approach (std::map<Game,unsigned long long> where value = how many Games corresponding to that value)
@@ -124,7 +158,7 @@ int main(int argc, char** argv) {
     int player2Start = strings[1][strings[1].size()-1] - '0';
     std::cout << player1Start << " and " << player2Start << std::endl;
     bool player1Won = false;
-    auto res = roll(Game(player1Start, player2Start), 2);
+    auto res = roll(Game(player1Start, player2Start, true, 21));
     std::cout << res.first << " " << res.second << std::endl;
     return 0;
 }
