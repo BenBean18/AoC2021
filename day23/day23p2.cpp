@@ -188,6 +188,9 @@ struct PriorityQueue {
   }
 };
 
+std::map<unsigned long long,std::vector<std::pair<State, double>>> memo; // key = State::hash
+double printThreshold = 0;
+
 template<typename T>
 class Graph {
     std::map<T,std::set<T>> connections;
@@ -221,10 +224,20 @@ public:
                 std::cout << "equal" << std::endl;
                 return {cameFrom, costSoFar};
             }
-            auto neighbors = neighborCostFunction(current);
+            std::vector<std::pair<State, double>> neighbors;
+            try {
+                neighbors = memo.at(current.hash());
+            } catch (...) {
+                neighbors = neighborCostFunction(current);
+            }
+            // auto neighbors = neighborCostFunction(current);
             for (auto neighborCost : neighbors) {
                 T neighbor = neighborCost.first;
                 double newCost = costSoFar[current] + neighborCost.second;
+                if (newCost > printThreshold) {
+                    std::cout << newCost << std::endl;
+                    printThreshold += 10;
+                }
                 if (!visited[neighbor] || (newCost < costSoFar[neighbor])) {
                     visited[neighbor] = true;
                     costSoFar[neighbor] = newCost;
