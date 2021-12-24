@@ -98,7 +98,6 @@ struct State {
             if (r.size() > 0) {
                 char amphipod = r[r.size()-1];
                 State copy(s);
-                copy.rooms[i].pop_back();
                 for (int j = 0; j < s.hallway.size(); j++) {
                     State newState(copy);
                     if (s.hallway[j] == '.' && s.pathIsClear(i, j)) {
@@ -226,9 +225,6 @@ public:
             for (auto neighborCost : neighbors) {
                 T neighbor = neighborCost.first;
                 double newCost = costSoFar[current] + neighborCost.second;
-                if (newCost > 15) {
-                    std::cout << newCost << std::endl;
-                }
                 if (!visited[neighbor] || (newCost < costSoFar[neighbor])) {
                     visited[neighbor] = true;
                     costSoFar[neighbor] = newCost;
