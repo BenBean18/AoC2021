@@ -6,6 +6,7 @@
 #include <functional>
 #include <cassert>
 #include <queue>
+#include <algorithm>
 
 std::vector<std::string> getStrings() {
     std::vector<std::string> strings;
@@ -43,12 +44,23 @@ std::vector<int> getInts() {
     return ints;
 }
 
+unsigned long long hashStr(const char* s, unsigned long long salt)
+{
+    unsigned long long h = salt;
+    while (*s)
+        h = h * 101 + (unsigned long long) *s++;
+    return h;
+}
+
 struct Amphipod {
-    int hallwayPosition = -1; // 0 = left, 10 = right
-    int room = -1; // 0 is top left, 3 is top right, 4 is bottom left, 7 is bottom right
+    int8_t hallwayPosition = -1; // 0 = left, 10 = right
+    int8_t room = -1; // 0 is top left, 3 is top right, 4 is bottom left, 7 is bottom right
     bool inRoom = false;
     bool inHallway = false;
     char type; // 'A', 'B', 'C', 'D'
+    Amphipod() {
+
+    }
     Amphipod(int h, int r, bool inH, bool inR, char t) {
         hallwayPosition = h;
         room = r;
@@ -56,24 +68,23 @@ struct Amphipod {
         inRoom = inR;
         type = t;
     }
-
     std::vector<Amphipod> neighbors() {
         std::vector<Amphipod> toReturn;
         if (inRoom) {
-            toReturn.push_back(Amphipod(0, -1, false, true, type));
+            toReturn.push_back(Amphipod(0, -1, true, false, type));
             for (int p = 1; p <= 9; p+=2) {
-                toReturn.push_back(Amphipod(p, -1, false, true, type));
+                toReturn.push_back(Amphipod(p, -1, true, false, type));
             }
-            toReturn.push_back(Amphipod(10, -1, false, true, type));
+            toReturn.push_back(Amphipod(10, -1, true, false, type));
         }
         if (inHallway) {
-            toReturn.push_back(Amphipod(-1, (int)(type-'A'), true, false, type));
-            toReturn.push_back(Amphipod(-1, (int)(type-'A')+4, true, false, type));
+            toReturn.push_back(Amphipod(-1, (int)(type-'A'), false, true, type));
+            toReturn.push_back(Amphipod(-1, (int)(type-'A')+4, false, true, type));
         }
         return toReturn;
     }
     
-    static int roomToHallwayPosition(int r) {
+    static int8_t roomToHallwayPosition(int8_t r) {
         return 2+((r % 4)*2);
     }
 
@@ -105,8 +116,29 @@ struct Amphipod {
         if (b.inRoom) {
             return (std::max(a.hallwayPosition, roomToHallwayPosition(b.room)) - std::min(a.hallwayPosition, roomToHallwayPosition(b.room))) + (b.room/4);
         }
+        std::cout << "rut row!" << std::endl;
+    }
+
+    void printMe() {
+        std::cout << "Hash " << this->hash() << ". Type " << type << ". " << (inHallway?((std::string)"Hallway: "+std::to_string(hallwayPosition)):"") << (inRoom?((std::string)"Room: "+std::to_string(room)):"") << std::endl;
+    }
+
+    std::string strHash() {
+        std::string s{(char)(hallwayPosition + 40), (char)((room % 4) + 50), (char)(inRoom + 60), (char)(inHallway + 70), type};
+        return s;
+    }
+
+    unsigned long hash() {
+        const char s[] = {(char)(hallwayPosition + 40), (char)((room % 4) + 50), (char)(inRoom + 60), (char)(inHallway + 70), type};
+        return hashStr(s, 512);
     }
 };
+inline bool operator<(Amphipod a, Amphipod b) {
+    return a.hash() < b.hash();
+}
+inline bool operator==(Amphipod a, Amphipod b) {
+    return a.hash() == b.hash();
+}
 
 struct State {
     std::vector<Amphipod> amphipods; // D1,D2,C1,C2,B1,B2,A1,A2
@@ -117,26 +149,68 @@ struct State {
       #?#@#A#B#
       #########
     */
-    std::vector<std::pair<State, double>> neighbors() { // vector of <state, cost>
+    State(std::vector<Amphipod> amphipods) {
+        this->amphipods = amphipods;
+    }
+    State() {
+
+    }
+    static std::vector<std::pair<State, double>> neighbors(State s) { // vector of <state, cost>
         std::vector<std::pair<State, double>> states;
-        for (int a = 0; a < amphipods.size(); a++) {
-            State state = *this;
+        for (int a = 0; a < s.amphipods.size(); a++) {
+            State state(s);
             double cost;
-            for (Amphipod b : amphipods[a].neighbors()) {
-                for (Amphipod aa : amphipods) {
-                    if (!b.collidingWith(amphipods[a], aa)) {
-                        state.amphipods[a] = b;
-                        cost = Amphipod::cost(amphipods[a], b);
+            for (Amphipod b : s.amphipods[a].neighbors()) {
+                bool collision = false;
+                for (int aa = 0; aa < s.amphipods.size(); aa++) {
+                    if (aa == a) {
+                        continue;
+                    }
+                    if (b.collidingWith(s.amphipods[a], s.amphipods[aa])) {
+                        collision = true;
                     }
                 }
+                if (!collision) {
+                    state.amphipods[a] = b;
+                    cost = Amphipod::cost(s.amphipods[a], b);
+                    states.push_back({state, cost});
+                    state = State(s);
+                }
             }
-            states.push_back({state, cost});
+            // std::cout << std::endl;
         }
         return states;
     }
-    // do the dijkstra! (do do do do do do do doo doo, do do do do do do-do doo doo)
-    // (on the states, using this function)
+    unsigned long long hash() {
+        std::string data;
+        std::vector<Amphipod> as(amphipods);
+        std::sort(as.begin(), as.end());
+        for (Amphipod a : as) {
+            const char chars[] = {(char)(a.hallwayPosition + 40), (char)((a.room % 4) + 50), (char)(a.inRoom + 60), (char)(a.inHallway + 70), a.type};
+            data.append(chars);
+        }
+        return hashStr(data.c_str(), 123);
+    }
 };
+inline bool operator==(State a, State b) {
+    // std::vector<Amphipod> intersection(8);
+    // std::sort(a.amphipods.begin(), a.amphipods.end());
+    // std::sort(b.amphipods.begin(), b.amphipods.end());
+    // intersection.resize(std::set_intersection(a.amphipods.begin(), a.amphipods.end(), b.amphipods.begin(), b.amphipods.end(), intersection.begin()) - intersection.begin());
+    // return intersection.size() == 8;
+    return a.hash() == b.hash();
+}
+inline bool operator<(State a, State b) {
+    // bool lessThan = true;
+    // std::sort(a.amphipods.begin(), a.amphipods.end());
+    // std::sort(b.amphipods.begin(), b.amphipods.end());
+    // assert(a.amphipods.size() == 8 && b.amphipods.size() == 8);
+    // for (int i = 0; i < 8; i++) {
+    //     lessThan = lessThan && (a.amphipods[i] < b.amphipods[i]);
+    // }
+    // return lessThan;
+    return a.hash() < b.hash();
+}
 
 // Notes:
 // Maybe try A* on all amphipods in order. If an amphipod can't move that cycle, it passes and no move is made.
@@ -200,11 +274,13 @@ public:
         return connections[node];
     }
 
-    std::pair<std::map<T,T>, std::map<T,double>> dijkstra(T start, T end, std::function<double(T,T)> costFunction, std::function<void(PriorityQueue<T,double>,T,T,std::map<T,T>,double,std::map<T,std::set<T>>)> debugVisualization = [](PriorityQueue<T,double> /**/,T /**/,T /**/,std::map<T,T> /**/,double /**/,std::map<T,std::set<T>> /**/){}) {
+    std::pair<std::map<T,T>, std::map<T,double>> dijkstra(T start, T end, std::function<std::vector<std::pair<T,double>>(T)> neighborCostFunction, std::function<void(PriorityQueue<T,double>,T,T,std::map<T,T>,double,std::map<T,std::set<T>>)> debugVisualization = [](PriorityQueue<T,double> /**/,T /**/,T /**/,std::map<T,T> /**/,double /**/,std::map<T,std::set<T>> /**/){}) {
         PriorityQueue<T,double> frontier; // frontier queue that returns the lowest value
         frontier.put(start, 0);
         std::map<T,T> cameFrom;
         std::map<T,double> costSoFar;
+
+        std::cout << "dijkstra" << std::endl;
 
         // This drastically improves speed (more than 10x), find() is slow
         std::map<T,bool> visited;
@@ -215,10 +291,13 @@ public:
 #ifdef VISUALIZE
                 debugVisualization(frontier, current, current, cameFrom, 0, connections);
 #endif
+                std::cout << "equal" << std::endl;
                 return {cameFrom, costSoFar};
             }
-            for (T neighbor : this->neighbors(current)) {
-                double newCost = costSoFar[current] + costFunction(current, neighbor);
+            auto neighbors = neighborCostFunction(current);
+            for (auto neighborCost : neighbors) {
+                T neighbor = neighborCost.first;
+                double newCost = costSoFar[current] + neighborCost.second;
                 if (!visited[neighbor] || (newCost < costSoFar[neighbor])) {
                     visited[neighbor] = true;
                     costSoFar[neighbor] = newCost;
@@ -257,85 +336,23 @@ public:
 // Map can be represented as:
 // 0123456789
 
-std::pair<std::map<char, char>, Graph<char>> parseInput() {
+State parseInput() {
     std::vector<std::string> strings = getStrings();
-    Graph<char> graph;
-    std::map<char, char> graphMap;
-    // hallway
-    graph.addEdge('0','1');
-    graph.addEdge('1','3');
-    graph.addEdge('3','5');
-    graph.addEdge('5','7');
-    graph.addEdge('7','9');
-    graph.addEdge('9',':');
-    // rooms
-    graph.addEdge('1',';');
-    graph.addEdge('3',';');
-    graph.addEdge('3','<');
-    graph.addEdge('5','<');
-    graph.addEdge('5','=');
-    graph.addEdge('7','=');
-    graph.addEdge('7','>');
-    graph.addEdge('9','>');
-    
-    // second rooms
-    graph.addEdge(';','?');
-    graph.addEdge('<','@');
-    graph.addEdge('=','A');
-    graph.addEdge('>','B');
-
-    char counter = '0';
-    for (std::string s : strings) {
-        for (char c : s) {
-            if ((c != '#') && (c != ' ')) {
-                graphMap[counter] = c;
-                counter++;
+    std::vector<Amphipod> amphipods;
+    for (int i = 2; i < strings.size(); i++) { // skip first row, it's empty
+        for (int j = 0; j < strings[i].size(); j++) {
+            if (strings[i][j] >= 'A' && strings[i][j] <= 'D') { // 3, 5, 7, or 9. -3 = 0,2,4,or 6. /2 = 0,1,2,3
+                amphipods.push_back(Amphipod(-1, (j-3)/2 + (i-2)*4, false, true, strings[i][j]));
             }
         }
     }
-    assert(counter == 'C');
-    return {graphMap, graph};
+    return State(amphipods);
 }
 
 int main(int argc, char** argv) {
-    Graph<char> graph;
-    std::map<char, char> graphMap;
-    std::tie(graphMap, graph) = parseInput();
-    std::map<char, double> costMap{{'A',1},{'B',10},{'C',100},{'D',1000}};
-    std::vector<char> As;
-    std::vector<char> Bs;
-    std::vector<char> Cs;
-    std::vector<char> Ds;
-    std::vector<char> agents;
-    for (auto i : graphMap) {
-        if (i.second == 'A') {
-            As.push_back(i.first);
-        }
-        if (i.second == 'B') {
-            Bs.push_back(i.first);
-        }
-        if (i.second == 'C') {
-            Cs.push_back(i.first);
-        }
-        if (i.second == 'D') {
-            Ds.push_back(i.first);
-        }
-    }
-    for (char d : Ds) {
-        agents.push_back(d);
-    }
-    for (char c : Cs) {
-        agents.push_back(c);
-    }
-    for (char b : Bs) {
-        agents.push_back(b);
-    }
-    for (char a : As) {
-        agents.push_back(a);
-    }
-    for (char a : agents) {
-        std::cout << a << " ";
-    }
-    std::function<double(char, char)> costFunction = [graphMap,costMap](char a, char b){ return 2 * (graphMap.at(a)>'@'?costMap.at(graphMap.at(a)):costMap.at(graphMap.at(b))); };
+    State state = parseInput();
+    State end{{Amphipod(-1,0,false,true,'A'),Amphipod(-1,4,false,true,'A'),Amphipod(-1,1,false,true,'B'),Amphipod(-1,5,false,true,'B'),Amphipod(-1,2,false,true,'C'),Amphipod(-1,6,false,true,'C'),Amphipod(-1,3,false,true,'D'),Amphipod(-1,7,false,true,'D')}};
+    Graph<State> graph;
+    std::cout << graph.dijkstra(state, end, State::neighbors).second[end] << std::endl;
     return 0;
 }
