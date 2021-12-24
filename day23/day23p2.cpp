@@ -69,8 +69,10 @@ unsigned long long hashStr(const char* s, unsigned long long salt)
 
 struct State {
     std::string hallway = ".......";
-    // This is 4 rooms, but std::array was being weird
-    std::vector<std::vector<char>> rooms; // char is 'A','B','C','D'
+    std::array<std::vector<char>,4> rooms; // char is 'A','B','C','D'
+    State() {
+        rooms.fill({});
+    }
     bool pathIsClear(int room, int hallwayPos) {
         if (hallwayPos > room+2) {
             for (int i = room+2; i < hallwayPos; i++) {
@@ -90,7 +92,7 @@ struct State {
         return false;
     }
     static std::vector<std::pair<State, double>> neighbors(State s) { // returns vector{{state, additionalCost}}
-        std::vector<std::pair<State, double>> states;
+        std::vector<std::pair<State, double>> states{};
         for (int i = 0; i < s.rooms.size(); i++) { // room -> hallway
             auto r = s.rooms[i];
             if (r.size() > 0) {
@@ -104,15 +106,7 @@ struct State {
                         newState.hallway[j] = amphipod;
                     }
                     //                          distance up         + dist in hall
-                    std::pair<State, double> p;
-                    p.first.hallway = newState.hallway;
-                    for (int i = 0; i < 4; i++) {
-                        for (char c : newState.rooms[i]) {
-                            p.first.rooms[i].push_back(c);
-                        }
-                    }
-                    p.second = (LENGTH-r.size())+1 + fabs(j - (i+1.5))+0.5;
-                    states.push_back(p);
+                    states.push_back({newState, (LENGTH-r.size())+1 + fabs(j - (i+1.5))+0.5});
                 }
             }
         }
@@ -132,15 +126,8 @@ struct State {
                     State newState(s);
                     newState.hallway[i] = '.';
                     newState.rooms[v-'A'].push_back(v);
-                    std::pair<State, double> p;
-                    p.first.hallway = newState.hallway;
-                    for (int i = 0; i < 4; i++) {
-                        for (char c : newState.rooms[i]) {
-                            p.first.rooms[i].push_back(c);
-                        }
-                    }
-                    p.second = (LENGTH-s.rooms[v-'A'].size()) + fabs(i - (v-'A'+1.5))+0.5;
-                    states.push_back(p);
+                    //                          distance up                    + dist in hall
+                    states.push_back({newState, (LENGTH-s.rooms[v-'A'].size()) + fabs(i - (v-'A'+1.5))+0.5});
                 }
             }
         }
@@ -267,7 +254,7 @@ State parseInput() {
     strings.insert(strings.begin() + 3, toInsert2);
     strings.insert(strings.begin() + 3, toInsert1);
 #endif
-    std::vector<std::vector<char>> rooms;
+    std::array<std::vector<char>,4> rooms;
     for (int _ = 2; _ < 2+LENGTH; _++) {
         for (int i = 3; i < 10; i+=2) {
             rooms[(i-3)/2].push_back(strings[_][i]);
