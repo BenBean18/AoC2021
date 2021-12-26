@@ -1,0 +1,43 @@
+All instructions follow this pattern:
+inp w\nmul x 0\nadd x z\nmod x 26\ndiv z (.+)\nadd x (.+)\neql x w\neql x 0\nmul y 0\nadd y 25\nmul y x\nadd y 1\nmul z y\nmul y 0\nadd y w\nadd y (.+)\nmul y x\nadd z y
+Only 3 numbers change, marked by (.+)
+(ex. first instruction:
+inp w
+mul x 0
+add x z
+mod x 26
+div z 1 <- can change
+add x 14 <- can change
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 8 <- can change
+mul y x
+add z y
+
+is
+
+w = input
+x = z % 26
+z = z / <num>
+x = x + <num>
+x = x != w
+y = (25 * x) + 1
+z = z * y
+y = y * 0
+y = w + <num>
+y = y * x
+z = z + y
+
+is
+
+w = input
+z = (z / <num1>) * ((25 * ((z % 26 + <num2>) != w)) + 1) + (w + <num3>) * ((z % 26 + <num2>) != w)
+
+aka function taking w and previous z and returning z
