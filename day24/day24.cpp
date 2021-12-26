@@ -37,6 +37,11 @@ public:
     unsigned long long doOperation(unsigned long long z, int w) const {
         return ((z / uniqueNumbers[0]) * ((25 * ((z % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((z % 26 + uniqueNumbers[1]) != w));
     }
+    // Function that takes desired z and returns all w&(z % 26) pairs that return that
+    std::vector<std::pair<int, unsigned long long>> wZPairs(unsigned long long desiredZ) const {
+        // desiredZ = ((z / uniqueNumbers[0]) * ((25 * ((z % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((z % 26 + uniqueNumbers[1]) != w))
+        // reverse so result is (z % 26) and desiredZ and w are provided, because then we only need to check 9 times (one for each possible w)
+    }
 };
 
 std::vector<Operation> parseInput() {
