@@ -241,21 +241,32 @@ void addOne(std::vector<char> &num) { // remember, it's backwards (least signifi
 
 int main(int argc, char** argv) {
     auto ops = parseInput();
-    int threadNum = 32;
+    int threadNum = 8;
     std::vector<ALU> alus;
     std::vector<std::thread> threads;
     bool finishedThreads[threadNum]; // actually a bool
     for (int i = 0; i < threadNum; i++) {
         alus.push_back(ALU());
+        finishedThreads[i] = true;
     }
     std::vector<char> num = {1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    std::vector<char> stop = {9,9,9,9,9,9,9,9,9,9,9,9,9,9};
     std::vector<char> maxNum = {1,1,1,1,1,1,1,1,1,1,1,1,1,1};
     std::mutex mtx;
-    for (int i = 0; i < threadNum; i++) {
-        addOne(num);
-        ALU *a = &(alus[i]);
-        bool *finished = &(finishedThreads[i]);
-        threads.emplace_back([a, ops, finished, num, &maxNum, &mtx](){(*a).runCode(num, ops); if ((*a).z == 0) { mtx.lock(); if (num > maxNum) { maxNum = num; } mtx.unlock(); } *finished = true; });
+    for (num; !(num > stop); addOne(num)) {
+        while (true) {
+            for (int i = 0; i < threadNum; i++) {
+                if (finishedThreads[i]) {
+                    ALU *a = &(alus[i]);
+                    bool *finished = &(finishedThreads[i]);
+                    *finished = false;
+                    threads.emplace_back([a, ops, finished, num, &maxNum, &mtx](){(*a).runCode(num, ops); if ((*a).z == 0) { mtx.lock(); std::cout << "hi" << std::endl; if (num > maxNum) { maxNum = num; } mtx.unlock(); } *finished = true; });
+                    goto end_of_loop;
+                }
+            }
+        }
+end_of_loop:
+        continue;
         // std::cout << alu.z << '\n';
     }
     for (std::thread &t : threads) {
