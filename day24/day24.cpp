@@ -24,7 +24,7 @@ std::string string() {
     return s;
 }
 
-int w, x, y, z = 0;
+// int w, x, y, z = 0;
 
 class Operation {
     std::array<int, 3> uniqueNumbers;
@@ -34,13 +34,29 @@ public:
         uniqueNumbers[1] = b;
         uniqueNumbers[2] = c;
     }
-    unsigned long long doOperation(unsigned long long z, int w) const {
+    signed long long doOperation(signed long long z, int w) const {
         return ((z / uniqueNumbers[0]) * ((25 * ((z % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((z % 26 + uniqueNumbers[1]) != w));
     }
-    // Function that takes desired z and returns all w&(z % 26) pairs that return that
-    std::vector<std::pair<int, unsigned long long>> wZPairs(unsigned long long desiredZ) const {
+    // Function that takes desired z and returns all w&z pairs that return that
+    std::vector<std::pair<int, signed long long>> wZPairs(signed long long desiredZ) const {
         // desiredZ = ((z / uniqueNumbers[0]) * ((25 * ((z % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((z % 26 + uniqueNumbers[1]) != w))
         // reverse so result is (z % 26) and desiredZ and w are provided, because then we only need to check 9 times (one for each possible w)
+        // signed long long zResult = (z / uniqueNumbers[0]) * ((25 * x) + 1) + (w + uniqueNumbers[2]) * x;
+        // solve desiredZ = (z/uniqueNumbers[0]) * (25x + 1) + (w + uniqueNumbers[2])x
+        // desiredZ - (w + uniqueNumbers[2]) * x = (z/uniqueNumbers[0]) * (25x + 1)
+        // (desiredZ - (w + uniqueNumbers[2]) * x) / (25x + 1) = z/uniqueNumbers[0]
+        // uniqueNumbers[0] * ((desiredZ - (w + uniqueNumbers[2]) * x) / ((25 * x) + 1)) = z
+        std::vector<std::pair<int, signed long long>> wAndZ;
+        for (int w = 1; w < 10; w++) {
+            for (int zMod26 = 0; zMod26 < 26; zMod26++) {
+                int x = ((zMod26 + uniqueNumbers[1]) != w);
+                signed long long previousZ = uniqueNumbers[0] * ((desiredZ - (w + uniqueNumbers[2]) * x) / ((25 * x) + 1));
+                if (previousZ % 26 == zMod26) {
+                    wAndZ.push_back({w, previousZ});
+                }
+            }
+        }
+        return wAndZ;
     }
 };
 
@@ -68,10 +84,10 @@ int main(int argc, char** argv) {
     // Reverse the equation for the last one. For all w values, find all z values that cause it to be 0. (aka instead of newZ = z and w and a bunch of stuff, 0 = z and w and a bunch of stuff -> w and a bunch of stuff = z required for it to be 0). Go up the line (e.g. for second one, instead of 0 = z and w and a bunch of stuff, do <all z values for last one to be 0> = z and w and a bunch of stuff).
     
     // no worky:
-    // unsigned long long z = 0;
+    // signed long long z = 0;
     // for (int i = 0; i < 14; i++) {
     //     for (int n = 1; n < 10; n++) {
-    //         unsigned long long zCopy = ops[i].doOperation(z, n);
+    //         signed long long zCopy = ops[i].doOperation(z, n);
     //         if (zCopy == 0) { // This doesn't work because not all produce zero, we only need the last one to produce zero.
     //             if (n+'0' > num[i]+'0') {
     //                 num[i] = n+'0';
@@ -81,5 +97,9 @@ int main(int argc, char** argv) {
     //     }
     //     z = ops[i].doOperation(z, num[i]);
     // }
+    for (auto p : ops[ops.size()-1].wZPairs(0)) {
+        std::cout << p.first << " " << p.second << std::endl;
+        std::cout << ops[ops.size()-1].doOperation(p.second, p.first) << std::endl;
+    }
     return 0;
 }
