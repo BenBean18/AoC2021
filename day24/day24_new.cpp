@@ -3,6 +3,8 @@
 #include <vector>
 #include <regex>
 #include <thread>
+#include <cassert>
+#include <mutex>
 
 std::vector<std::string> getStrings() {
     std::vector<std::string> strings;
@@ -143,8 +145,8 @@ struct Operation {
 
 struct ALU {
     char alu[4] = "ALU";
-    long w, x, y, z;
-    long &refToVar(signed char c) {
+    long long w, x, y, z;
+    long long &refToVar(signed char c) {
         if (c == 'w') {
             return this->w;
         }
@@ -158,7 +160,7 @@ struct ALU {
             return this->z;
         }
     }
-    // Number is passed in backwards
+    // Number is passed in backwards (last in vector is first, so least significant place first)
     void runCode(std::vector<char> inputs, std::vector<Operation> code) {
         w, x, y, z = 0;
         for (Operation o : code) {
@@ -216,6 +218,27 @@ std::vector<Operation> parseInput() {
     return ops;
 }
 
+bool operator>(std::vector<char> a, std::vector<char> b) { // least significant value first, see line 163
+    assert(a.size() == b.size());
+    for (int i = a.size()-1; i >= 0; i--) {
+        if (a[i] > b[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void addOne(std::vector<char> &num) { // remember, it's backwards (least significant first)
+    for (int i = 0; i < num.size()-1; i++) {
+        num[i]++;
+        if (num[i] > 9) {
+            num[i] = 1;
+        } else {
+            return;
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     auto ops = parseInput();
     int threadNum = 32;
@@ -225,18 +248,24 @@ int main(int argc, char** argv) {
     for (int i = 0; i < threadNum; i++) {
         alus.push_back(ALU());
     }
+    std::vector<char> num = {1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    std::vector<char> maxNum = {1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    std::mutex mtx;
     for (int i = 0; i < threadNum; i++) {
+        addOne(num);
         ALU *a = &(alus[i]);
         bool *finished = &(finishedThreads[i]);
-        threads.emplace_back([a, ops, finished](){(*a).runCode({1,1,1,1,1 ,1,1,1,1,1 ,1,1,1,1}, ops); *finished = true; });
+        threads.emplace_back([a, ops, finished, num, &maxNum, &mtx](){(*a).runCode(num, ops); if ((*a).z == 0) { mtx.lock(); if (num > maxNum) { maxNum = num; } mtx.unlock(); } *finished = true; });
         // std::cout << alu.z << '\n';
     }
     for (std::thread &t : threads) {
         t.join();
     }
-    for (int i = 0; i < threadNum; i++) {
-        std::cout << alus[i].z << std::endl;
+    std::reverse(num.begin(), num.end());
+    for (char c : maxNum) {
+        std::cout << (int)c;
     }
+    std::cout << std::endl;
     // std::flush(std::cout);
     return 0;
 }
