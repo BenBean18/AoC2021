@@ -39,24 +39,8 @@ public:
     }
     // Function that takes desired z and returns all w&z pairs that return that
     std::vector<std::pair<int, signed long long>> wZPairs(signed long long desiredZ) const {
-        // desiredZ = ((z / uniqueNumbers[0]) * ((25 * ((z % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((z % 26 + uniqueNumbers[1]) != w))
-        // reverse so result is (z % 26) and desiredZ and w are provided, because then we only need to check 9 times (one for each possible w)
-        // signed long long zResult = (z / uniqueNumbers[0]) * ((25 * x) + 1) + (w + uniqueNumbers[2]) * x;
-        // solve desiredZ = (z/uniqueNumbers[0]) * (25x + 1) + (w + uniqueNumbers[2])x
-        // desiredZ - (w + uniqueNumbers[2]) * x = (z/uniqueNumbers[0]) * (25x + 1)
-        // (desiredZ - (w + uniqueNumbers[2]) * x) / (25x + 1) = z/uniqueNumbers[0]
-        // uniqueNumbers[0] * ((desiredZ - (w + uniqueNumbers[2]) * x) / ((25 * x) + 1)) = z
-        std::vector<std::pair<int, signed long long>> wAndZ;
-        for (int w = 1; w < 10; w++) {
-            for (int zMod26 = 0; zMod26 < 26; zMod26++) {
-                int x = ((zMod26 + uniqueNumbers[1]) != w);
-                signed long long previousZ = uniqueNumbers[0] * ((desiredZ - (w + uniqueNumbers[2]) * x) / ((25 * x) + 1));
-                if (previousZ % 26 == zMod26) {
-                    wAndZ.push_back({w, previousZ});
-                }
-            }
-        }
-        return wAndZ;
+        // signed long long newZ = (oldZ / uniqueNumbers[0]) * ((25 * ((oldZ % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((oldZ % 26 + uniqueNumbers[1]) != w);
+        
     }
 };
 
