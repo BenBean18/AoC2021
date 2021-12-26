@@ -116,8 +116,14 @@ struct State {
         std::map<int,int> extendedHallwayPos = {{0,0},{1,1},{2,3},{3,5},{4,7},{5,9},{6,10}};
         return extendedHallwayPos[pos];
     }
-    static int actualDist(int pos1, int pos2) {
+    static int extendRoom(int room) {
+        // std::string extendedHallway = "..R.R.R.R..";
+        std::map<int,int> extendedHallwayPos = {{0,2},{1,4},{2,6},{3,8}};
+        return extendedHallwayPos[room];
+    }
+    static int actualDist(int /*hall*/pos1, int /*room*/pos2) {
         return extend(std::max(pos1,pos2)) - extend(std::min(pos1,pos2));
+        // return abs(extendRoom(room) - extend(hall));
     }
     static double horizDistance(int room, int hallwayPos) {
         if (hallwayPos >= room+2) {
@@ -125,6 +131,7 @@ struct State {
         } else {
             return actualDist(hallwayPos, room+1) + 1;
         }
+        // return actualDist(hallwayPos, room);
     }
     static std::vector<std::pair<State, double>> neighbors(State s) { // returns vector{{state, additionalCost}}
         std::vector<std::pair<State, double>> states{};
@@ -185,8 +192,8 @@ struct State {
                     State newState(s);
                     newState.hallway[i] = '.';
                     newState.rooms[v-'A'].push_back(v);
-                    //                          distance up                       + dist in hall
-                    states.push_back({newState, ((LENGTH-s.rooms[v-'A'].size())+1 + horizDistance(v-'A', i))*pow(10,v-'A')});
+                    //                          distance up                     + dist in hall
+                    states.push_back({newState, ((LENGTH-s.rooms[v-'A'].size()) + horizDistance(v-'A', i))*pow(10,v-'A')});
                 }
             }
         }
@@ -340,7 +347,7 @@ public:
                 double newCost = costSoFar[current] + neighborCost.second;
                 if ((costSoFar[neighbor] == 0) || (newCost < costSoFar[neighbor])) {
                     neighbor.printMe();
-                    std::cout << newCost;
+                    std::cout << newCost << std::endl;
                     // if (newCost > printThreshold) {
                     //     std::cout << newCost << "(added " << neighborCost.second << ")" << std::endl;
                     //     current.printMe();
@@ -402,21 +409,22 @@ int main(int argc, char** argv) {
             end.rooms[room].push_back(room+'A');
         }
     }
-    for (auto n : State::neighbors(start)) {
-        n.first.printMe();
-    }
-
-    // Graph graph;
-    // std::map<State, double> costSoFar;
-    // std::map<State, State> cameFrom;
-    // std::tie(costSoFar, cameFrom) = graph.dijkstra(start, end, State::neighbors);
-    // State current = end;
-    // while (current != start) {
-    //     current.printMe();
-    //     std::cout << costSoFar[current] << std::endl;
-    //     current = cameFrom[current];
+    // for (auto n : State::neighbors(start)) {
+    //     n.first.printMe();
+    //     std::cout << n.second << std::endl;
     // }
-    // start.printMe();
-    // std::cout << costSoFar[end] << std::endl;
+
+    Graph graph;
+    std::map<State, double> costSoFar;
+    std::map<State, State> cameFrom;
+    std::tie(costSoFar, cameFrom) = graph.dijkstra(start, end, State::neighbors);
+    State current = end;
+    while (current != start) {
+        current.printMe();
+        std::cout << costSoFar[current] << std::endl;
+        current = cameFrom[current];
+    }
+    start.printMe();
+    std::cout << costSoFar[end] << std::endl;
     return 0;
 }

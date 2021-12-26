@@ -1,0 +1,19 @@
+room -> hall. room size = 1. distance = 2.
+_____
+|e___| hall
+|^|
+|s|    room
+---
+
+------------------------------------------------
+
+hall -> room. room size = 1. distance = 1.
+_____
+|s___| hall
+|e|
+|@|    room
+---
+
+@ = amphipod, stationary
+s = moving amphipod start location
+e = moving amphipod end location
