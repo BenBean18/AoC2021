@@ -39,7 +39,7 @@ public:
     }
 };
 
-std::function<unsigned long long(std::string)> parseInput() { // returns function taking 14 digit number as a string and returning z
+std::vector<Operation> parseInput() {
     std::string s = string();
     std::regex r("inp w\\nmul x 0\\nadd x z\\nmod x 26\\ndiv z (.+)\\nadd x (.+)\\neql x w\\neql x 0\\nmul y 0\\nadd y 25\\nmul y x\\nadd y 1\\nmul z y\\nmul y 0\\nadd y w\\nadd y (.+)\\nmul y x\\nadd z y");
     std::smatch sm;
@@ -52,11 +52,29 @@ std::function<unsigned long long(std::string)> parseInput() { // returns functio
         s = sm.suffix();
     }
     assert(ops.size() == 14);
-    return [ops](std::string in){ unsigned long long z = 0; for (int i = 0; i < 14; i++) { z = ops[i].doOperation(z, in[i]-'0'); } return z; };
+    return ops;
 }
 
 int main(int argc, char** argv) {
-    auto f = parseInput();
-    std::cout << f("99999999999999");
+    auto ops = parseInput();
+    std::string num = "00000000000000";
+    // Each digit has a z value that will cause it to be 0. Find highest possibility of w for all that will cause the next digit to produce a z that will cause the next digit to produce a z that will cause (...) the last digit to produce 0.
+    // Might need to combine all ops into one function.
+    // Reverse the equation for the last one. For all w values, find all z values that cause it to be 0. (aka instead of newZ = z and w and a bunch of stuff, 0 = z and w and a bunch of stuff -> w and a bunch of stuff = z required for it to be 0). Go up the line (e.g. for second one, instead of 0 = z and w and a bunch of stuff, do <all z values for last one to be 0> = z and w and a bunch of stuff).
+    
+    // no worky:
+    // unsigned long long z = 0;
+    // for (int i = 0; i < 14; i++) {
+    //     for (int n = 1; n < 10; n++) {
+    //         unsigned long long zCopy = ops[i].doOperation(z, n);
+    //         if (zCopy == 0) { // This doesn't work because not all produce zero, we only need the last one to produce zero.
+    //             if (n+'0' > num[i]+'0') {
+    //                 num[i] = n+'0';
+    //             }
+    //             std::cout << "zero @ " << n << std::endl;
+    //         }
+    //     }
+    //     z = ops[i].doOperation(z, num[i]);
+    // }
     return 0;
 }
