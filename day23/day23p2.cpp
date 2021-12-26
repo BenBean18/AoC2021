@@ -68,8 +68,6 @@ unsigned long long hashStr(const char* s, unsigned long long salt)
     return h;
 }
 
-std::vector<__int128_t> multiplesOf5;
-
 struct State {
     std::string hallway = ".......";
     std::array<std::vector<char>,4> rooms; // char is 'A','B','C','D'
@@ -98,7 +96,7 @@ struct State {
             if (debug) {
                 std::cout << "\t-";
             }
-            for (int i = hallwayPos+1; i < room+1; i++) {
+            for (int i = hallwayPos+1; i < room+2; i++) {
                 if (debug) {
                     std::cout << i << "=" << hallway[i];
                 }
@@ -145,6 +143,9 @@ struct State {
                 }
                 State copy(s);
                 for (int j = 0; j < s.hallway.size(); j++) {
+                    // std::cout << "In state" << std::endl;
+                    // s.printMe();
+                    // std::cout << "Path between room " << i << " and position " << j << (s.pathIsClear(i, j, true)?" is ":" isn't ") << "clear." << std::endl;
                     if (s.hallway[j] == '.' && s.pathIsClear(i, j)) {
                         // std::cout << "path is clear between room " << i << " and hallway " << j << std::endl << "state: ";
                         State newState((const State)copy);
@@ -192,12 +193,15 @@ struct State {
         return states;
     }
     void printMe() {
+        // std::string newHallway = "";
+        // newHallway = newHallway + hallway[0] + hallway[1] + "." + hallway[2] + "." + hallway[3] + "." + hallway[4] + "." + hallway[5] + hallway[6];
         std::cout << hallway << std::endl;
-        for (auto r : rooms) {
+        for (int i = 0; i < rooms.size(); i++) {
+            auto r = rooms[i];
             for (char c : r) {
                 std::cout << c;
             }
-            std::cout << " ";
+            std::cout << "-";
         }
         std::cout << std::endl;
     }
@@ -206,28 +210,35 @@ struct State {
     }
     unsigned long long hash() {
         std::string h = hallway;
+        unsigned char h2[8];
         for (auto r : rooms) {
-            for (char c : r) {
-                h.push_back(c);
+            for (int i = 0; i < LENGTH; i++) {
+                try {
+                    h.push_back(r.at(i));
+                } catch (...) {
+                    h.push_back('.');
+                }
             }
         }
+        for (int i = 3; i > h.size() % 3; i--) {
+            h.push_back('.');
+        }
+        // for (int i = 0; i < h.size(); i+=3) {
+        //     h2[i/3] = charToBase5(h[i])*25+charToBase5(h[i+1])*5+charToBase5(h[i+2]);
+        // }
+        // unsigned long long hash = 0;
+        // hash += (unsigned long long)h2[0] << 56;
+        // hash += (unsigned long long)h2[1] << 48;
+        // hash += (unsigned long long)h2[2] << 40;
+        // hash += (unsigned long long)h2[3] << 32;
+        // hash += (unsigned long long)h2[4] << 24;
+        // hash += (unsigned long long)h2[5] << 16;
+        // hash += (unsigned long long)h2[6] << 8;
+        // hash += (unsigned long long)h2[7];
+        // return hash;
         return hashStr(h.c_str(), 123);
+        // return std::hash<std::string>(h2);
     }
-    // __int128_t hash() {
-    //     __int128_t hash;
-    //     __int128_t i = 0;
-    //     for (char c : hallway) {
-    //         hash += charToBase5(c);
-    //         hash = hash << 3;
-    //     }
-    //     for (int r = 0; r < 4; r++) {
-    //         for (int i = 0; i < 2; i++) {
-    //             hash += i<rooms[r].size()?rooms[r].at(i):0;
-    //             hash = hash << 3;
-    //         }
-    //     }
-    //     return hash;
-    // }
 };
 inline bool operator<(State a, State b) {
     return a.hash() < b.hash();
@@ -295,17 +306,17 @@ public:
         return connections[node];
     }
 
-    std::tuple<double, std::map<T,T>> dijkstra(T start, T end, std::function<std::vector<std::pair<T,double>>(T)> neighborCostFunction, std::function<void(PriorityQueue<T,double>,T,T,std::map<T,T>,double,std::map<T,std::set<T>>)> debugVisualization = [](PriorityQueue<T,double> /**/,T /**/,T /**/,std::map<T,T> /**/,double /**/,std::map<T,std::set<T>> /**/){}) {
+    std::tuple<std::map<T,double>, std::map<T,T>> dijkstra(T start, T end, std::function<std::vector<std::pair<T,double>>(T)> neighborCostFunction, std::function<void(PriorityQueue<T,double>,T,T,std::map<T,T>,double,std::map<T,std::set<T>>)> debugVisualization = [](PriorityQueue<T,double> /**/,T /**/,T /**/,std::map<T,T> /**/,double /**/,std::map<T,std::set<T>> /**/){}) {
         // only returns cost
         PriorityQueue<T,double> frontier; // frontier queue that returns the lowest value
         frontier.put(start, 0);
         std::map<T,T> cameFrom; // key = State::hash
-        std::map<unsigned long long,double> costSoFar; // key = State::hash
+        std::map<T,double> costSoFar; // key = State::hash
 
         std::cout << "dijkstra" << std::endl;
 
-        // This drastically improves speed (more than 10x), find() is slow
-        std::map<unsigned long long,bool> visited; // key = State::hash
+        // // This drastically improves speed (more than 10x), find() is slow
+        // std::map<T,bool> visited; // key = State::hash
 
         while (!frontier.empty()) {
             T current = frontier.get();
@@ -314,6 +325,7 @@ public:
                 debugVisualization(frontier, current, current, cameFrom, 0, connections);
 #endif
                 std::cout << "equal" << std::endl;
+                return {costSoFar, cameFrom};
             }
             std::vector<std::pair<State, double>> neighbors;
             try {
@@ -322,18 +334,21 @@ public:
                 neighbors = neighborCostFunction(current);
             }
             // auto neighbors = neighborCostFunction(current);
+            current.printMe();
             for (auto neighborCost : neighbors) {
                 T neighbor = neighborCost.first;
-                double newCost = costSoFar[current.hash()] + neighborCost.second;
-                if (!visited[neighbor.hash()] || (newCost < costSoFar[neighbor.hash()])) {
-                    if (newCost > printThreshold) {
-                        std::cout << newCost << "(added " << neighborCost.second << ")" << std::endl;
-                        current.printMe();
-                        neighbor.printMe();
-                        printThreshold += 10;
-                    }
-                    visited[neighbor.hash()] = true;
-                    costSoFar[neighbor.hash()] = newCost;
+                double newCost = costSoFar[current] + neighborCost.second;
+                if ((costSoFar[neighbor] == 0) || (newCost < costSoFar[neighbor])) {
+                    neighbor.printMe();
+                    std::cout << newCost;
+                    // if (newCost > printThreshold) {
+                    //     std::cout << newCost << "(added " << neighborCost.second << ")" << std::endl;
+                    //     current.printMe();
+                    //     neighbor.printMe();
+                    //     printThreshold = newCost + 10;
+                    // }
+                    // visited[neighbor] = true;
+                    costSoFar[neighbor] = newCost;
                     double priority = newCost;
                     frontier.put(neighbor, priority);
                     cameFrom[neighbor] = current;
@@ -345,8 +360,9 @@ public:
 #endif
                 }
             }
+            std::cout << std::endl;
         }
-        return {costSoFar[end.hash()], cameFrom};
+        return {costSoFar, cameFrom};
     }
 
 };
@@ -379,11 +395,6 @@ State parseInput() {
 }
 
 int main(int argc, char** argv) {
-    __int128_t mult = 1;
-    for (int i = 0; i < 20; i++) {
-        multiplesOf5.push_back(mult);
-        mult *= 5;
-    }
     State start = parseInput();
     State end = State();
     for (int _ = 0; _ < LENGTH; _++) {
@@ -391,18 +402,21 @@ int main(int argc, char** argv) {
             end.rooms[room].push_back(room+'A');
         }
     }
-    // for (auto n : State::neighbors(start)) {
-    //     n.first.printMe();
-    // }
-    Graph graph;
-    double cost;
-    std::map<State, State> cameFrom;
-    std::tie(cost, cameFrom) = graph.dijkstra(start, end, State::neighbors);
-    State current = end;
-    while (current != start) {
-        current.printMe();
-        current = cameFrom[current];
+    for (auto n : State::neighbors(start)) {
+        n.first.printMe();
     }
-    std::cout << cost + 3510 << std::endl;
+
+    // Graph graph;
+    // std::map<State, double> costSoFar;
+    // std::map<State, State> cameFrom;
+    // std::tie(costSoFar, cameFrom) = graph.dijkstra(start, end, State::neighbors);
+    // State current = end;
+    // while (current != start) {
+    //     current.printMe();
+    //     std::cout << costSoFar[current] << std::endl;
+    //     current = cameFrom[current];
+    // }
+    // start.printMe();
+    // std::cout << costSoFar[end] << std::endl;
     return 0;
 }
