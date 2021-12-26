@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <bitset>
 
-#define PART1
+#define PART2
 
 #ifdef PART2
 #define LENGTH 4
@@ -171,7 +171,7 @@ struct State {
             char v = s.hallway[i];
             if (v != '.') {
                 bool roomIsGood = false;
-                if (s.rooms[v-'A'].size() < 2) {
+                if (s.rooms[v-'A'].size() < LENGTH) {
                     roomIsGood = true;
                     for (char c : s.rooms[v-'A']) {
                         if (c != v) {
@@ -313,12 +313,12 @@ public:
         return connections[node];
     }
 
-    std::tuple<std::map<T,double>, std::map<T,T>> dijkstra(T start, T end, std::function<std::vector<std::pair<T,double>>(T)> neighborCostFunction, std::function<void(PriorityQueue<T,double>,T,T,std::map<T,T>,double,std::map<T,std::set<T>>)> debugVisualization = [](PriorityQueue<T,double> /**/,T /**/,T /**/,std::map<T,T> /**/,double /**/,std::map<T,std::set<T>> /**/){}) {
+    double dijkstra(T start, T end, std::function<std::vector<std::pair<T,double>>(T)> neighborCostFunction, std::function<void(PriorityQueue<T,double>,T,T,std::map<T,T>,double,std::map<T,std::set<T>>)> debugVisualization = [](PriorityQueue<T,double> /**/,T /**/,T /**/,std::map<T,T> /**/,double /**/,std::map<T,std::set<T>> /**/){}) {
         // only returns cost
         PriorityQueue<T,double> frontier; // frontier queue that returns the lowest value
         frontier.put(start, 0);
-        std::map<T,T> cameFrom; // key = State::hash
-        std::map<T,double> costSoFar; // key = State::hash
+        std::map<unsigned long long,T> cameFrom; // key = State::hash
+        std::map<unsigned long long,double> costSoFar; // key = State::hash
 
         std::cout << "dijkstra" << std::endl;
 
@@ -332,7 +332,7 @@ public:
                 debugVisualization(frontier, current, current, cameFrom, 0, connections);
 #endif
                 std::cout << "equal" << std::endl;
-                return {costSoFar, cameFrom};
+                return costSoFar[end.hash()];
             }
             std::vector<std::pair<State, double>> neighbors;
             try {
@@ -341,24 +341,18 @@ public:
                 neighbors = neighborCostFunction(current);
             }
             // auto neighbors = neighborCostFunction(current);
-            current.printMe();
             for (auto neighborCost : neighbors) {
                 T neighbor = neighborCost.first;
-                double newCost = costSoFar[current] + neighborCost.second;
-                if ((costSoFar[neighbor] == 0) || (newCost < costSoFar[neighbor])) {
-                    neighbor.printMe();
-                    std::cout << newCost << std::endl;
-                    // if (newCost > printThreshold) {
-                    //     std::cout << newCost << "(added " << neighborCost.second << ")" << std::endl;
-                    //     current.printMe();
-                    //     neighbor.printMe();
-                    //     printThreshold = newCost + 10;
-                    // }
-                    // visited[neighbor] = true;
-                    costSoFar[neighbor] = newCost;
+                double newCost = costSoFar[current.hash()] + neighborCost.second;
+                if ((costSoFar[neighbor.hash()] == 0) || (newCost < costSoFar[neighbor.hash()])) {
+                    if (newCost > printThreshold) {
+                        std::cout << newCost << std::endl;
+                        printThreshold = newCost + 100;
+                    }
+                    costSoFar[neighbor.hash()] = newCost;
                     double priority = newCost;
                     frontier.put(neighbor, priority);
-                    cameFrom[neighbor] = current;
+                    cameFrom[neighbor.hash()] = current;
                     if (neighbor.hash() == end.hash()) {
                         std::cout << "Found result! " << newCost << std::endl;
                     }
@@ -367,11 +361,8 @@ public:
 #endif
                 }
             }
-            std::cout << std::endl;
         }
-        return {costSoFar, cameFrom};
     }
-
 };
 
 State parseInput() {
@@ -415,16 +406,16 @@ int main(int argc, char** argv) {
     // }
 
     Graph graph;
-    std::map<State, double> costSoFar;
-    std::map<State, State> cameFrom;
-    std::tie(costSoFar, cameFrom) = graph.dijkstra(start, end, State::neighbors);
-    State current = end;
-    while (current != start) {
-        current.printMe();
-        std::cout << costSoFar[current] << std::endl;
-        current = cameFrom[current];
-    }
-    start.printMe();
-    std::cout << costSoFar[end] << std::endl;
+    // std::map<unsigned long long, double> costSoFar;
+    // std::map<T, State> cameFrom;
+    // std::tie(costSoFar, cameFrom) = graph.dijkstra(start, end, State::neighbors);
+    // State current = end;
+    // while (current != start) {
+    //     current.printMe();
+    //     std::cout << costSoFar[current.hash()] << std::endl;
+    //     current = cameFrom[current];
+    // }
+    // start.printMe();
+    std::cout << "Result: " << graph.dijkstra(start, end, State::neighbors) << std::endl;
     return 0;
 }
