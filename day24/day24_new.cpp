@@ -142,6 +142,7 @@ struct Operation {
 };
 
 struct ALU {
+    char alu[4] = "ALU";
     long w, x, y, z;
     long &refToVar(signed char c) {
         if (c == 'w') {
@@ -220,12 +221,14 @@ int main(int argc, char** argv) {
     int threadNum = 32;
     std::vector<ALU> alus;
     std::vector<std::thread> threads;
+    bool finishedThreads[threadNum]; // actually a bool
     for (int i = 0; i < threadNum; i++) {
         alus.push_back(ALU());
     }
     for (int i = 0; i < threadNum; i++) {
-        ALU *a = &alus[i];
-        threads.emplace_back([&a, ops](){(*a).runCode({1,1,1,1,1 ,1,1,1,1,1 ,1,1,1,1}, ops); });
+        ALU *a = &(alus[i]);
+        bool *finished = &(finishedThreads[i]);
+        threads.emplace_back([a, ops, finished](){(*a).runCode({1,1,1,1,1 ,1,1,1,1,1 ,1,1,1,1}, ops); *finished = true; });
         // std::cout << alu.z << '\n';
     }
     for (std::thread &t : threads) {
