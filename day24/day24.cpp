@@ -68,6 +68,21 @@ std::vector<Operation> parseInput() {
     return ops;
 }
 
+bool calculatePairs(int i, std::vector<Operation> &ops, std::array<int, 14> &starts, std::array<std::vector<std::pair<int, signed long long>>, 14> &wzPairs, std::array<int, 14> &number, bool debug = false) {
+    if (debug) {
+        std::cout << "hi!" << std::endl;
+    }
+    for (int p = wzPairs[i+1].size() - starts[i]; p >= 0; p--) {
+        auto pairs = ops[i].wZPairs(wzPairs[i+1][p].second);
+        if (pairs.size() != 0) {
+            wzPairs[i] = pairs;
+            number[i+1] = wzPairs[i+1][p].first;
+            return true;
+        }
+    }
+    return false;
+}
+
 int main(int argc, char** argv) {
     auto ops = parseInput();
     std::string num = "00000000000000";
@@ -95,26 +110,23 @@ int main(int argc, char** argv) {
     std::array<int, 14> starts;
     starts.fill(1);
     for (int i = 12; i >= 0; i--) {
-        std::cout << i << std::endl;
+        std::cout << i << " " << starts[i] << std::endl;
         bool foundNumber = false;
-        for (int p = wzPairs[i+1].size() - starts[i]; p >= 0; p--) {
-            auto pairs = ops[i].wZPairs(wzPairs[i+1][p].second);
-            if (pairs.size() != 0) {
-                wzPairs[i] = pairs;
-                number[i+1] = wzPairs[i+1][p].first;
-                foundNumber = true;
-                break;
+        while (!calculatePairs(i, ops, starts, wzPairs, number, true)) {
+            int l = 12;
+            starts[l]++;
+            while (starts[l] > 8) {
+                starts[l] = 1;
+                l--;
+                starts[l]++;
             }
-        }
-        if (!foundNumber) {
-            i++;
-            starts[i]++;
-            if (starts[i] > wzPairs[i].size()) {
-                starts[i] = 1;
-                i++;
-                starts[i]++;
+            calculatePairs(l, ops, starts, wzPairs, number);
+            for (int k = 12; k >= i; k--) {
+                std::cout << k << " " << starts[k] << "\t";
             }
+            std::cout << "->" << calculatePairs(i, ops, starts, wzPairs, number) << std::endl;
         }
+        // if didn't find a number, backtrack starting at outer level. decrease starting wz pair from last digit to current until pair is found
     }
     for (auto i : number) {
         std::cout << i << std::endl;
