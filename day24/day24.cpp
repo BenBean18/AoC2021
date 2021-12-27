@@ -37,10 +37,15 @@ public:
     signed long long doOperation(signed long long z, int w) const {
         return ((z / uniqueNumbers[0]) * ((25 * ((z % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((z % 26 + uniqueNumbers[1]) != w));
     }
-    // Function that takes desired z and returns all w&z pairs that return that
+    // Function that takes desired z and returns all w&(z%26,z/num) pairs that return that
     std::vector<std::pair<int, signed long long>> wZPairs(signed long long desiredZ) const {
         // signed long long newZ = (oldZ / uniqueNumbers[0]) * ((25 * ((oldZ % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((oldZ % 26 + uniqueNumbers[1]) != w);
-        
+        // need oldZ = newZ...w...
+        // newZ = (oldZDivNum0) * ((25 * ((oldZMod26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((oldZMod26 + uniqueNumbers[1]) != w);
+        // Can try all z/num and z%26 and w possibilities
+        for (int w = 1; w < 10; w++) {
+            
+        }
     }
 };
 
@@ -63,7 +68,7 @@ std::vector<Operation> parseInput() {
 int main(int argc, char** argv) {
     auto ops = parseInput();
     std::string num = "00000000000000";
-    // Each digit has a z value that will cause it to be 0. Find highest possibility of w for all that will cause the next digit to produce a z that will cause the next digit to produce a z that will cause (...) the last digit to produce 0.
+    // The last digit has a z value that will cause it to be 0. Find highest possibility of w for all that will cause the next digit to produce a z that will cause the next digit to produce a z that will cause (...) the last digit to produce 0.
     // Might need to combine all ops into one function.
     // Reverse the equation for the last one. For all w values, find all z values that cause it to be 0. (aka instead of newZ = z and w and a bunch of stuff, 0 = z and w and a bunch of stuff -> w and a bunch of stuff = z required for it to be 0). Go up the line (e.g. for second one, instead of 0 = z and w and a bunch of stuff, do <all z values for last one to be 0> = z and w and a bunch of stuff).
     
@@ -81,9 +86,19 @@ int main(int argc, char** argv) {
     //     }
     //     z = ops[i].doOperation(z, num[i]);
     // }
-    for (auto p : ops[ops.size()-1].wZPairs(0)) {
-        std::cout << p.first << " " << p.second << std::endl;
-        std::cout << ops[ops.size()-1].doOperation(p.second, p.first) << std::endl;
+    std::vector<std::pair<int, unsigned long>> wz;
+    for (int w = 1; w < 10; w++) {
+        for (unsigned long z = 0; z < 999999999; z++) {
+            if (ops[ops.size()-1].doOperation(z, w) == 0) {
+                wz.push_back({w,z});
+                std::cout << w << " " << z << std::endl;
+                break;
+            }
+        }
     }
+    // for (auto p : ops[ops.size()-1].wZPairs(0)) {
+    //     std::cout << p.first << " " << p.second << std::endl;
+    //     std::cout << ops[ops.size()-1].doOperation(p.second, p.first) << std::endl;
+    // }
     return 0;
 }
