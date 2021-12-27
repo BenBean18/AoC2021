@@ -39,13 +39,16 @@ public:
     }
     // Function that takes desired z and returns all w&(z%26,z/num) pairs that return that
     std::vector<std::pair<int, signed long long>> wZPairs(signed long long desiredZ) const {
-        // signed long long newZ = (oldZ / uniqueNumbers[0]) * ((25 * ((oldZ % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((oldZ % 26 + uniqueNumbers[1]) != w);
-        // need oldZ = newZ...w...
-        // newZ = (oldZDivNum0) * ((25 * ((oldZMod26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((oldZMod26 + uniqueNumbers[1]) != w);
-        // Can try all z/num and z%26 and w possibilities
+        std::vector<std::pair<int, signed long long>> wz;
         for (int w = 1; w < 10; w++) {
-            
+            for (unsigned long z = 0; z < 99999; z++) {
+                if (doOperation(z, w) == desiredZ) {
+                    wz.push_back({w,z});
+                    break;
+                }
+            }
         }
+        return wz;
     }
 };
 
@@ -86,15 +89,35 @@ int main(int argc, char** argv) {
     //     }
     //     z = ops[i].doOperation(z, num[i]);
     // }
-    std::vector<std::pair<int, unsigned long>> wz;
-    for (int w = 1; w < 10; w++) {
-        for (unsigned long z = 0; z < 999999999; z++) {
-            if (ops[ops.size()-1].doOperation(z, w) == 0) {
-                wz.push_back({w,z});
-                std::cout << w << " " << z << std::endl;
+    std::array<std::vector<std::pair<int, signed long long>>, 14> wzPairs;
+    std::array<int, 14> number;
+    wzPairs[13] = ops[13].wZPairs(0);
+    std::array<int, 14> starts;
+    starts.fill(1);
+    for (int i = 12; i >= 0; i--) {
+        std::cout << i << std::endl;
+        bool foundNumber = false;
+        for (int p = wzPairs[i+1].size() - starts[i]; p >= 0; p--) {
+            auto pairs = ops[i].wZPairs(wzPairs[i+1][p].second);
+            if (pairs.size() != 0) {
+                wzPairs[i] = pairs;
+                number[i+1] = wzPairs[i+1][p].first;
+                foundNumber = true;
                 break;
             }
         }
+        if (!foundNumber) {
+            i++;
+            starts[i]++;
+            if (starts[i] > wzPairs[i].size()) {
+                starts[i] = 1;
+                i++;
+                starts[i]++;
+            }
+        }
+    }
+    for (auto i : number) {
+        std::cout << i << std::endl;
     }
     // for (auto p : ops[ops.size()-1].wZPairs(0)) {
     //     std::cout << p.first << " " << p.second << std::endl;
