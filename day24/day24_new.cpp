@@ -239,44 +239,63 @@ void addOne(std::vector<char> &num) { // remember, it's backwards (least signifi
     }
 }
 
+void subOne(std::vector<char> &num) { // remember, it's backwards (least significant first)
+    for (int i = 0; i < num.size()-1; i++) {
+        num[i]--;
+        if (num[i] < 1) {
+            num[i] = 9;
+        } else {
+            return;
+        }
+    }
+}
+
+void addSomething(std::vector<char> &num, int something) {
+    for (int _ = 0; _ < something; _++) {
+        addOne(num);
+    }
+}
+
+void subSomething(std::vector<char> &num, int something) {
+    for (int _ = 0; _ < something; _++) {
+        subOne(num);
+    }
+}
+
+// if !forward, num must be 999999... and stop must be 111111....
+void runMONAD(int increment, std::vector<Operation> ops, std::vector<char> &num, std::vector<char> stop, ALU &alu, std::mutex &mtx, bool forward = true) {
+    for (; (forward?(!(num>stop)):(num>stop)); (forward?addSomething(num, increment):subSomething(num, increment))) {
+        alu.runCode(num, ops);
+        if (alu.z == 0) {
+            mtx.lock();
+            std::cout << "Answer found! ";
+            std::reverse(num.begin(), num.end());
+            for (char c : num) {
+                std::cout << (int)c;
+            }
+            std::cout << std::endl;
+            mtx.unlock();
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     auto ops = parseInput();
     int threadNum = 8;
     std::vector<ALU> alus;
     std::vector<std::thread> threads;
-    bool finishedThreads[threadNum]; // actually a bool
+    std::vector<char> nums[threadNum];
+    std::vector<char> num = {9,9,9,9,9,9,9,9,9,9,9,9,9,9};
+    std::vector<char> stop = {1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    std::mutex mtx;
     for (int i = 0; i < threadNum; i++) {
         alus.push_back(ALU());
-        finishedThreads[i] = true;
-    }
-    std::vector<char> num = {1,1,1,1,1,1,1,1,1,1,1,1,1,1};
-    std::vector<char> stop = {9,9,9,9,9,9,9,9,9,9,9,9,9,9};
-    std::vector<char> maxNum = {1,1,1,1,1,1,1,1,1,1,1,1,1,1};
-    std::mutex mtx;
-    for (num; !(num > stop); addOne(num)) {
-        while (true) {
-            for (int i = 0; i < threadNum; i++) {
-                if (finishedThreads[i]) {
-                    ALU *a = &(alus[i]);
-                    bool *finished = &(finishedThreads[i]);
-                    *finished = false;
-                    threads.emplace_back([a, ops, finished, num, &maxNum, &mtx](){(*a).runCode(num, ops); if ((*a).z == 0) { mtx.lock(); std::cout << "hi" << std::endl; if (num > maxNum) { maxNum = num; } mtx.unlock(); } *finished = true; });
-                    goto end_of_loop;
-                }
-            }
-        }
-end_of_loop:
-        continue;
-        // std::cout << alu.z << '\n';
+        nums[i] = num;
+        subOne(num);
+        threads.emplace_back(runMONAD, threadNum, ops, std::ref(nums[i]), stop, std::ref(alus[i]), std::ref(mtx), false);
     }
     for (std::thread &t : threads) {
         t.join();
     }
-    std::reverse(num.begin(), num.end());
-    for (char c : maxNum) {
-        std::cout << (int)c;
-    }
-    std::cout << std::endl;
-    // std::flush(std::cout);
     return 0;
 }
