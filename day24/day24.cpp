@@ -70,7 +70,9 @@ public:
             // I was close to figuring this out on my own, and https://www.reddit.com/r/adventofcode/comments/rnejv5/2021_day_24_solutions/hpu84cj/ gave me the last bit of knowledge I needed.
             possibilities.push_back(origZ + i);
         }
-        assert(doOperation(finalZ * uniqueNumbers[0], w) == finalZ);
+        for (auto p : possibilities) {
+            assert(doOperation(p, w) == finalZ);
+        }
         return possibilities;
     }
     // Function that takes desired z and returns all w&(z%26,z/num) pairs that return that
