@@ -60,15 +60,19 @@ public:
     std::vector<signed long long> reverse(signed long long finalZ, int w) const {
         std::vector<signed long long> possibilities;
         unsigned long long origZ;
-        if ((finalZ - w - uniqueNumbers[2]) % 26 == 0) {
+        bool times26AndStuff = false;
+        if ((finalZ - w - uniqueNumbers[2]) % 26 != 0) {
             origZ = ((finalZ - w - uniqueNumbers[2]) / 26) * uniqueNumbers[0];
+            times26AndStuff = true;
         } else {
             origZ = finalZ * uniqueNumbers[0];
         }
         for (int i = 0; i < uniqueNumbers[0]; i++) { // With "* uniqueNumbers[0]", we are reversing "originalZ / uniqueNumbers[0]" *rounded down*. This means that we need to consider all possibilities from z * uniqueNumbers[0] to z*(uniqueNumbers[0]*2-1).
             // To illustrate this with an example, to solve x/5 = 1 with no rounding down, the answer is 5. However, if we round down, 5/5, 6/5, 7/5, 8/5, and 9/5 are all valid.
             // I was close to figuring this out on my own, and https://www.reddit.com/r/adventofcode/comments/rnejv5/2021_day_24_solutions/hpu84cj/ gave me the last bit of knowledge I needed.
-            possibilities.push_back(origZ + i);
+            if (times26AndStuff != (((origZ + i) % 26 + uniqueNumbers[1]) == w)) {
+                possibilities.push_back(origZ + i);
+            }
         }
         for (auto p : possibilities) {
             assert(doOperation(p, w) == finalZ);
