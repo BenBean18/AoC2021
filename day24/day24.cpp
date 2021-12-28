@@ -33,15 +33,42 @@ public:
         uniqueNumbers[0] = a;
         uniqueNumbers[1] = b;
         uniqueNumbers[2] = c;
+        unsigned long long z = rand();
+        for (int i = 1; i < 10; i++) {
+            unsigned long long z = rand();
+            assert(doOperation(z, i) == doOperation2(z, i));
+        }
+        z = rand();
+        unsigned long long final = doOperation(z, 8);
+        std::cout << z << " " << final << std::endl;
+        assert(reverse(final, 8) == z);
     }
-    signed long long doOperation(signed long long z, int w) const {
+    unsigned long long doOperation(unsigned long long z, int w) const {
         return ((z / uniqueNumbers[0]) * ((25 * ((z % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((z % 26 + uniqueNumbers[1]) != w));
     }
+    unsigned long long doOperation2(const unsigned long long z, int w) const {
+        unsigned long long zFinal = z / uniqueNumbers[0];
+        if ((z % 26 + uniqueNumbers[1]) != w) {
+            unsigned long long zBefore = zFinal;
+            zFinal = zFinal * 26; // anything times 26 mod 26 is 0
+            zFinal = zFinal + w + uniqueNumbers[2];
+            assert((zFinal - w - uniqueNumbers[2]) / 26 == zBefore);
+            assert(zBefore * uniqueNumbers[0] == zFinal);
+            std::cout << "hello. " << uniqueNumbers[0] << " " << uniqueNumbers[1] << " " << uniqueNumbers[2] << " w=" << w << ". " << z << " " << ((zFinal - w - uniqueNumbers[2]) / 26) * uniqueNumbers[0] << std::endl;
+        }
+        return zFinal;
+    }
+    unsigned long long reverse(unsigned long long finalZ, int w) const {
+        if (finalZ - w - ((finalZ / 26) * 26) == uniqueNumbers[2]) {
+            finalZ = (finalZ - w - uniqueNumbers[2]) / 26;
+        }
+        return finalZ * uniqueNumbers[0];
+    }
     // Function that takes desired z and returns all w&(z%26,z/num) pairs that return that
-    std::vector<std::pair<int, signed long long>> wZPairs(signed long long desiredZ) const {
-        std::vector<std::pair<int, signed long long>> wz;
+    std::vector<std::pair<int, unsigned long long>> wZPairs(unsigned long long desiredZ) const { // idea: have a list of zs that would be suitable
+        std::vector<std::pair<int, unsigned long long>> wz;
         for (int w = 1; w < 10; w++) {
-            for (unsigned long z = 0; z < 99999; z++) {
+            for (unsigned long z = 0; z < 99999999; z++) {
                 if (doOperation(z, w) == desiredZ) {
                     wz.push_back({w,z});
                     break;
@@ -68,7 +95,7 @@ std::vector<Operation> parseInput() {
     return ops;
 }
 
-bool calculatePairs(int i, std::vector<Operation> &ops, std::array<int, 14> &starts, std::array<std::vector<std::pair<int, signed long long>>, 14> &wzPairs, std::array<int, 14> &number, bool debug = false) {
+bool calculatePairs(int i, std::vector<Operation> &ops, std::array<int, 14> &starts, std::array<std::vector<std::pair<int, unsigned long long>>, 14> &wzPairs, std::array<int, 14> &number, bool debug = false) {
     if (debug) {
         std::cout << "hi!" << std::endl;
     }
@@ -91,10 +118,10 @@ int main(int argc, char** argv) {
     // Reverse the equation for the last one. For all w values, find all z values that cause it to be 0. (aka instead of newZ = z and w and a bunch of stuff, 0 = z and w and a bunch of stuff -> w and a bunch of stuff = z required for it to be 0). Go up the line (e.g. for second one, instead of 0 = z and w and a bunch of stuff, do <all z values for last one to be 0> = z and w and a bunch of stuff).
     
     // no worky:
-    // signed long long z = 0;
+    // unsigned long long z = 0;
     // for (int i = 0; i < 14; i++) {
     //     for (int n = 1; n < 10; n++) {
-    //         signed long long zCopy = ops[i].doOperation(z, n);
+    //         unsigned long long zCopy = ops[i].doOperation(z, n);
     //         if (zCopy == 0) { // This doesn't work because not all produce zero, we only need the last one to produce zero.
     //             if (n+'0' > num[i]+'0') {
     //                 num[i] = n+'0';
@@ -104,7 +131,7 @@ int main(int argc, char** argv) {
     //     }
     //     z = ops[i].doOperation(z, num[i]);
     // }
-    std::array<std::vector<std::pair<int, signed long long>>, 14> wzPairs;
+    std::array<std::vector<std::pair<int, unsigned long long>>, 14> wzPairs;
     std::array<int, 14> number;
     wzPairs[13] = ops[13].wZPairs(0);
     std::array<int, 14> starts;
@@ -113,11 +140,17 @@ int main(int argc, char** argv) {
         std::cout << i << " " << starts[i] << std::endl;
         bool foundNumber = false;
         while (!calculatePairs(i, ops, starts, wzPairs, number, true)) {
+            for (auto i : number) {
+                std::cout << i << " ";
+            }
             int l = 12;
             starts[l]++;
             while (starts[l] > 8) {
                 starts[l] = 1;
                 l--;
+                if (l == i) {
+                    break;
+                }
                 starts[l]++;
             }
             calculatePairs(l, ops, starts, wzPairs, number);
