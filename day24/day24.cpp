@@ -33,23 +33,20 @@ public:
         uniqueNumbers[0] = a;
         uniqueNumbers[1] = b;
         uniqueNumbers[2] = c;
-        // signed long long z = rand();
-        // for (int i = 1; i < 10; i++) {
-        //     signed long long z = rand();
-        //     assert(doOperation(z, i) == doOperation2(z, i));
-        // }
-        // z = rand();
-        // signed long long final = doOperation2(z, 8);
-        // std::cout << z << " " << final << std::endl;
-        // signed long long reversed = reverse(final, 8)[0];
-        // std::cout << "reversed: " << reversed << std::endl;
-        // assert(doOperation(reversed, 8) == final);
+        signed long long z = rand();
+        signed long long final = doOperation2(z, 8, true);
+        std::cout << z << " " << final << std::endl;
+        signed long long reversed = reverse(final, 8)[0];
+        std::cout << "reversed: " << reversed << std::endl;
     }
     signed long long doOperation(signed long long z, int w) const {
         return ((z / uniqueNumbers[0]) * ((25 * ((z % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((z % 26 + uniqueNumbers[1]) != w));
     }
-    signed long long doOperation2(signed long long z, int w) const {
+    signed long long doOperation2(signed long long z, int w, bool debug = false) const {
         signed long long zFinal = z / uniqueNumbers[0];
+        if (debug) {
+            std::cout << "zf " << zFinal << std::endl;
+        }
         if ((z % 26 + uniqueNumbers[1]) != w) {
             signed long long zBefore = zFinal;
             zFinal = zFinal * 26; // anything times 26 mod 26 is 0
@@ -61,7 +58,7 @@ public:
         std::vector<signed long long> possibilities;
         unsigned long long origZ;
         bool times26AndStuff = false;
-        if ((finalZ - w - uniqueNumbers[2]) % 26 != 0) {
+        if ((finalZ - w - uniqueNumbers[2]) % 26 == 0) {
             origZ = ((finalZ - w - uniqueNumbers[2]) / 26) * uniqueNumbers[0];
             times26AndStuff = true;
         } else {
@@ -70,12 +67,15 @@ public:
         for (int i = 0; i < uniqueNumbers[0]; i++) { // With "* uniqueNumbers[0]", we are reversing "originalZ / uniqueNumbers[0]" *rounded down*. This means that we need to consider all possibilities from z * uniqueNumbers[0] to z*(uniqueNumbers[0]*2-1).
             // To illustrate this with an example, to solve x/5 = 1 with no rounding down, the answer is 5. However, if we round down, 5/5, 6/5, 7/5, 8/5, and 9/5 are all valid.
             // I was close to figuring this out on my own, and https://www.reddit.com/r/adventofcode/comments/rnejv5/2021_day_24_solutions/hpu84cj/ gave me the last bit of knowledge I needed.
+
+            // Another thing I missed is that (finalZ - w - uniqueNumbers[2]) % 26 != 0 does not guarantee that
             if (times26AndStuff != (((origZ + i) % 26 + uniqueNumbers[1]) == w)) {
                 possibilities.push_back(origZ + i);
             }
         }
         for (auto p : possibilities) {
-            assert(doOperation(p, w) == finalZ);
+            // std::cout << p << " -> " << doOperation(p, w) << (doOperation(p, w)==finalZ?" == ":" != ") << finalZ << std::endl;
+            assert(doOperation2(p, w) == finalZ);
         }
         return possibilities;
     }
