@@ -263,7 +263,7 @@ void subSomething(std::vector<char> &num, int something) {
 }
 
 // if !forward, num must be 999999... and stop must be 111111....
-void runMONAD(int increment, std::vector<Operation> ops, std::vector<char> &num, std::vector<char> stop, ALU &alu, std::mutex &mtx, bool forward = true) {
+void runMONAD(int increment, std::vector<Operation> &ops, std::vector<char> &num, std::vector<char> &stop, ALU &alu, std::mutex &mtx, bool forward = true) {
     for (; (forward?(!(num>stop)):(num>stop)); (forward?addSomething(num, increment):subSomething(num, increment))) {
         alu.runCode(num, ops);
         if (alu.z == 0) {
@@ -281,7 +281,7 @@ void runMONAD(int increment, std::vector<Operation> ops, std::vector<char> &num,
 
 int main(int argc, char** argv) {
     auto ops = parseInput();
-    int threadNum = 8;
+    int threadNum = 16;
     std::vector<ALU> alus;
     std::vector<std::thread> threads;
     std::vector<char> nums[threadNum];
@@ -292,7 +292,7 @@ int main(int argc, char** argv) {
         alus.push_back(ALU());
         nums[i] = num;
         subOne(num);
-        threads.emplace_back(runMONAD, threadNum, ops, std::ref(nums[i]), stop, std::ref(alus[i]), std::ref(mtx), false);
+        threads.emplace_back(runMONAD, threadNum, std::ref(ops), std::ref(nums[i]), std::ref(stop), std::ref(alus[i]), std::ref(mtx), false);
     }
     for (std::thread &t : threads) {
         t.join();
