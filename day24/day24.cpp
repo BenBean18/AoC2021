@@ -39,30 +39,43 @@ public:
             assert(doOperation(z, i) == doOperation2(z, i));
         }
         z = rand();
-        unsigned long long final = doOperation(z, 8);
+        unsigned long long final = doOperation2(z, 8);
         std::cout << z << " " << final << std::endl;
-        assert(reverse(final, 8) == z);
+        unsigned long long reversed = reverse(final, 8)[0];
+        std::cout << "reversed: " << reversed << std::endl;
+        assert(reversed == z);
     }
     unsigned long long doOperation(unsigned long long z, int w) const {
         return ((z / uniqueNumbers[0]) * ((25 * ((z % 26 + uniqueNumbers[1]) != w)) + 1) + (w + uniqueNumbers[2]) * ((z % 26 + uniqueNumbers[1]) != w));
     }
-    unsigned long long doOperation2(const unsigned long long z, int w) const {
+    unsigned long long doOperation2(unsigned long long z, int w) const {
         unsigned long long zFinal = z / uniqueNumbers[0];
         if ((z % 26 + uniqueNumbers[1]) != w) {
             unsigned long long zBefore = zFinal;
             zFinal = zFinal * 26; // anything times 26 mod 26 is 0
             zFinal = zFinal + w + uniqueNumbers[2];
-            assert((zFinal - w - uniqueNumbers[2]) / 26 == zBefore);
-            assert(zBefore * uniqueNumbers[0] == zFinal);
-            std::cout << "hello. " << uniqueNumbers[0] << " " << uniqueNumbers[1] << " " << uniqueNumbers[2] << " w=" << w << ". " << z << " " << ((zFinal - w - uniqueNumbers[2]) / 26) * uniqueNumbers[0] << std::endl;
         }
         return zFinal;
     }
-    unsigned long long reverse(unsigned long long finalZ, int w) const {
+    std::vector<unsigned long long> reverse(unsigned long long finalZ, int w) const {
         if (finalZ - w - ((finalZ / 26) * 26) == uniqueNumbers[2]) {
-            finalZ = (finalZ - w - uniqueNumbers[2]) / 26;
+            if (uniqueNumbers[0] != 26) {
+                finalZ = (finalZ - w - uniqueNumbers[2]) / 26;
+            } else {
+                // there are now 25 (I think) possibilities because / 26 * 26 truncates things
+                unsigned long long zPrediction = (finalZ - w - uniqueNumbers[2]);
+                unsigned long long op = doOperation(zPrediction, w);
+                std::cout << "op " << op << " finalZ " << finalZ << std::endl;
+                std::vector<unsigned long long> possibilities;
+                for (zPrediction; zPrediction < finalZ - w - uniqueNumbers[2] + 26; zPrediction++) {
+                    if (zPrediction % 26 + uniqueNumbers[1] != w) {
+                        possibilities.push_back(zPrediction);
+                    }
+                }
+                return possibilities;
+            }
         }
-        return finalZ * uniqueNumbers[0];
+        return {finalZ * uniqueNumbers[0]};
     }
     // Function that takes desired z and returns all w&(z%26,z/num) pairs that return that
     std::vector<std::pair<int, unsigned long long>> wZPairs(unsigned long long desiredZ) const { // idea: have a list of zs that would be suitable
@@ -111,6 +124,9 @@ bool calculatePairs(int i, std::vector<Operation> &ops, std::array<int, 14> &sta
 }
 
 int main(int argc, char** argv) {
+    std::time_t t = std::time(0);   // get time now
+    std::tm* now = std::localtime(&t);
+    srand(now->tm_sec);
     auto ops = parseInput();
     std::string num = "00000000000000";
     // The last digit has a z value that will cause it to be 0. Find highest possibility of w for all that will cause the next digit to produce a z that will cause the next digit to produce a z that will cause (...) the last digit to produce 0.
