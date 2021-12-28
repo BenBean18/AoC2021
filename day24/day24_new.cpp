@@ -5,6 +5,7 @@
 #include <thread>
 #include <cassert>
 #include <mutex>
+#include <map>
 
 std::vector<std::string> getStrings() {
     std::vector<std::string> strings;
@@ -263,8 +264,9 @@ void subSomething(std::vector<char> &num, int something) {
 }
 
 // if !forward, num must be 999999... and stop must be 111111....
-void runMONAD(int increment, std::vector<Operation> &ops, std::vector<char> &num, std::vector<char> &stop, ALU &alu, std::mutex &mtx, bool forward = true) {
+void runMONAD(int increment, std::vector<Operation> &ops, std::vector<char> &num, std::vector<char> &stop, ALU &alu, std::mutex &mtx, std::map<std::pair<long long, std::hash<std::vector<char>>>, long long> &zAndNumToNewZ, bool forward = true) {
     for (; (forward?(!(num>stop)):(num>stop)); (forward?addSomething(num, increment):subSomething(num, increment))) {
+        long long z;
         alu.runCode(num, ops);
         if (alu.z == 0) {
             mtx.lock();
@@ -287,12 +289,13 @@ int main(int argc, char** argv) {
     std::vector<char> nums[threadNum];
     std::vector<char> num = {9,9,9,9,9,9,9,9,9,9,9,9,9,9};
     std::vector<char> stop = {1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    std::map<std::pair<long long, std::hash<std::vector<char>>>, long long> zAndNumToNewZ; // do it by digit
     std::mutex mtx;
     for (int i = 0; i < threadNum; i++) {
         alus.push_back(ALU());
         nums[i] = num;
         subOne(num);
-        threads.emplace_back(runMONAD, threadNum, std::ref(ops), std::ref(nums[i]), std::ref(stop), std::ref(alus[i]), std::ref(mtx), false);
+        threads.emplace_back(runMONAD, threadNum, std::ref(ops), std::ref(nums[i]), std::ref(stop), std::ref(alus[i]), std::ref(mtx), std::ref(zAndNumToNewZ), false);
     }
     for (std::thread &t : threads) {
         t.join();
