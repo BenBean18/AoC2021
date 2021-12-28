@@ -122,6 +122,42 @@ bool calculatePairs(int i, std::vector<Operation> &ops, std::array<int, 14> &sta
     return false;
 }
 
+std::map<std::pair<long long, int>,unsigned char> zAndDigitToW;
+
+// start at second last digit. compute all w and z pairs, using the zs and ws of the next digit. store them and their parents (parents in form pair<digit, index>), indexed by digit. go up one.
+void recurseMe(const std::vector<Operation> &ops, std::array<std::vector<std::pair<std::pair<int, long long>, std::pair<int, int>>>, 14> &validWZs, int digit = 12) { // validWZs length = 14
+    std::vector<std::pair<std::pair<int, long long>, std::pair<int, int>>> newValidWZs;
+    std::vector<std::pair<std::pair<int, long long>, std::pair<int, int>>> oldValidWZs; // remove valid wzs of the next one that don't result in any wz pair above
+    for (int i = 0; i < validWZs[digit+1].size(); i++) {
+        auto wzPairs = ops[digit].wZPairs(validWZs[digit+1][i].first.second);
+        for (auto p : wzPairs) {
+            newValidWZs.push_back({p, {digit+1, i}});
+            zAndDigitToW[{p.second,digit}] = p.first;
+        }
+        if (wzPairs.size() != 0) {
+            oldValidWZs.push_back(validWZs[digit+1][i]);
+        }
+    }
+    validWZs[digit+1] = oldValidWZs;
+    validWZs[digit] = newValidWZs;
+    std::cout << newValidWZs.size() << std::endl;
+    if (digit == 0) {
+        return;
+    }
+    digit--;
+    recurseMe(ops, validWZs, digit);
+}
+
+void followBack(std::array<std::vector<std::pair<std::pair<int, long long>, std::pair<int, int>>>, 14> &validWZs, int digit = 0) {
+    auto p = validWZs[digit][validWZs[digit].size()-1];
+    std::cout << p.first.first << std::endl;
+    digit++;
+    if (digit == 14) {
+        return;
+    }
+    followBack(validWZs, digit);
+}
+
 int main(int argc, char** argv) {
     std::time_t t = std::time(0);   // get time now
     std::tm* now = std::localtime(&t);
@@ -146,40 +182,44 @@ int main(int argc, char** argv) {
     //     }
     //     z = ops[i].doOperation(z, num[i]);
     // }
-    std::array<std::vector<std::pair<int, signed long long>>, 14> wzPairs;
+    std::array<std::vector<std::pair<std::pair<int, signed long long>, std::pair<int,int>>>, 14> wzPairs;
     std::array<int, 14> number;
-    wzPairs[13] = ops[13].wZPairs(0);
-    std::array<int, 14> starts;
-    starts.fill(1);
-    for (int i = 12; i >= 0; i--) {
-        std::cout << i << " " << starts[i] << std::endl;
-        bool foundNumber = false;
-        for (auto i : number) {
-            std::cout << i << " ";
-        }
-        std::cout << std::endl;
-        while (!calculatePairs(i, ops, starts, wzPairs, number, true)) {
-            int l = 12;
-            starts[l]++;
-            while (starts[l] > 8) {
-                starts[l] = 1;
-                l--;
-                if (l == i) {
-                    break;
-                }
-                starts[l]++;
-            }
-            calculatePairs(l, ops, starts, wzPairs, number);
-            for (int k = 12; k >= i; k--) {
-                std::cout << k << " " << starts[k] << "\t";
-            }
-            std::cout << "->" << calculatePairs(i, ops, starts, wzPairs, number) << std::endl;
-        }
-        // if didn't find a number, backtrack starting at outer level. decrease starting wz pair from last digit to current until pair is found
+    for (auto p : ops[13].wZPairs(0)) {
+        wzPairs[13].push_back({p, {-1,-1}});
     }
-    for (auto i : number) {
-        std::cout << i << std::endl;
-    }
+    // std::array<int, 14> starts;
+    // starts.fill(1);
+    // for (int i = 12; i >= 0; i--) {
+    //     std::cout << i << " " << starts[i] << std::endl;
+    //     bool foundNumber = false;
+    //     for (auto i : number) {
+    //         std::cout << i << " ";
+    //     }
+    //     std::cout << std::endl;
+    //     while (!calculatePairs(i, ops, starts, wzPairs, number, true)) {
+    //         int l = 12;
+    //         starts[l]++;
+    //         while (starts[l] > 8) {
+    //             starts[l] = 1;
+    //             l--;
+    //             if (l < i) {
+    //                 break;
+    //             }
+    //             starts[l]++;
+    //         }
+    //         calculatePairs(l, ops, starts, wzPairs, number);
+    //         for (int k = 12; k >= i; k--) {
+    //             std::cout << k << " " << starts[k] << "\t";
+    //         }
+    //         std::cout << "->" << calculatePairs(i, ops, starts, wzPairs, number) << std::endl;
+    //     }
+    //     // if didn't find a number, backtrack starting at outer level. decrease starting wz pair from last digit to current until pair is found
+    // }
+    recurseMe(ops, wzPairs);
+    // for (auto i : wzPairs[0]) {
+    //     std::cout << i.first.first << std::endl;
+    // }
+    followBack(wzPairs);
     // for (auto p : ops[ops.size()-1].wZPairs(0)) {
     //     std::cout << p.first << " " << p.second << std::endl;
     //     std::cout << ops[ops.size()-1].doOperation(p.second, p.first) << std::endl;
