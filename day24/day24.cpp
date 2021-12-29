@@ -68,7 +68,6 @@ public:
             // To illustrate this with an example, to solve x/5 = 1 with no rounding down, the answer is 5. However, if we round down, 5/5, 6/5, 7/5, 8/5, and 9/5 are all valid.
             // I was close to figuring this out on my own, and https://www.reddit.com/r/adventofcode/comments/rnejv5/2021_day_24_solutions/hpu84cj/ gave me the last bit of knowledge I needed.
 
-            // Another thing I missed is that (finalZ - w - uniqueNumbers[2]) % 26 != 0 does not guarantee that
             if (times26AndStuff != (((origZ + i) % 26 + uniqueNumbers[1]) == w)) {
                 possibilities.push_back(origZ + i);
             }
