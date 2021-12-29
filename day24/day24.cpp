@@ -138,7 +138,7 @@ void recurseMe(const std::vector<Operation> &ops, std::array<std::vector<std::pa
             oldValidWZs.push_back(validWZs[digit+1][i]);
         }
     }
-    validWZs[digit+1] = oldValidWZs;
+    // validWZs[digit+1] = oldValidWZs;
     validWZs[digit] = newValidWZs;
     std::cout << newValidWZs.size() << std::endl;
     if (digit == 0) {
@@ -148,14 +148,14 @@ void recurseMe(const std::vector<Operation> &ops, std::array<std::vector<std::pa
     recurseMe(ops, validWZs, digit);
 }
 
-void followBack(std::array<std::vector<std::pair<std::pair<int, long long>, std::pair<int, int>>>, 14> &validWZs, int digit = 0) {
-    auto p = validWZs[digit][validWZs[digit].size()-1];
-    std::cout << p.first.first << std::endl;
-    digit++;
-    if (digit == 14) {
-        return;
+void followBack(std::array<std::vector<std::pair<std::pair<int, long long>, std::pair<int, int>>>, 14> &validWZs) {
+    auto p = validWZs[0][validWZs[0].size()-1];
+    std::cout << p.first.first;
+    for (int digit = 1; digit < 14; digit++) {
+        p = validWZs[p.second.first][p.second.second];
+        std::cout << p.first.first;
     }
-    followBack(validWZs, digit);
+    std::cout << std::endl;
 }
 
 int main(int argc, char** argv) {
