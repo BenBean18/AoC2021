@@ -41,3 +41,5 @@ w = input
 z = (z / <num1>) * ((25 * ((z % 26 + <num2>) != w)) + 1) + (w + <num3>) * ((z % 26 + <num2>) != w)
 
 aka function taking w and previous z and returning z
+
+Also, another note -- compiling with g++ -Ofast makes the code run more than 10x as fast
